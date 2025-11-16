@@ -6,6 +6,8 @@ export enum Page {
   ADMIN_DASHBOARD = 'ADMIN_DASHBOARD',
   CREATE_BOOKING = 'CREATE_BOOKING',
   BOOKING_DETAILS = 'BOOKING_DETAILS',
+  FORGOT_PASSWORD = 'FORGOT_PASSWORD',
+  RESET_PASSWORD = 'RESET_PASSWORD',
 }
 
 export enum UserType {
@@ -19,6 +21,7 @@ export interface User {
   fullName: string;
   mobile: string;
   email: string;
+  password: string; // Will store the hashed password
   type: UserType;
 }
 

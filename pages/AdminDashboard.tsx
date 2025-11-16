@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { Booking, BookingStatus, GallonType, TimeSlot } from '../types';
+import { Booking, BookingStatus, GallonType, TimeSlot, User } from '../types';
 import BookingCard from '../components/BookingCard';
 import OverviewDashboard from '../components/OverviewDashboard';
 import SettingsPanel from '../components/SettingsPanel';
 import PaymentsDashboard from '../components/PaymentsDashboard';
-import { MOCK_USERS } from '../constants';
 
 interface AdminDashboardProps {
   allBookings: Booking[];
+  users: User[];
   updateBookingStatus: (id: string, status: BookingStatus) => void;
   gallonTypes: GallonType[];
   timeSlots: TimeSlot[];
@@ -23,7 +23,7 @@ type MainTab = 'overview' | 'manage' | 'payments' | 'settings';
 type ManageTab = 'Pending' | 'Active' | 'Completed' | 'Cancelled';
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { allBookings, updateBookingStatus } = props;
+  const { allBookings, updateBookingStatus, users } = props;
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('overview');
   const [activeManageTab, setActiveManageTab] = useState<ManageTab>('Pending');
 
@@ -114,9 +114,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
       </div>
 
       <div className="mt-8">
-        {activeMainTab === 'overview' && <OverviewDashboard bookings={allBookings} users={MOCK_USERS} />}
+        {activeMainTab === 'overview' && <OverviewDashboard bookings={allBookings} users={users} />}
         {activeMainTab === 'manage' && renderManageBookings()}
-        {activeMainTab === 'payments' && <PaymentsDashboard allBookings={allBookings} users={MOCK_USERS} />}
+        {activeMainTab === 'payments' && <PaymentsDashboard allBookings={allBookings} users={users} />}
         {activeMainTab === 'settings' && <SettingsPanel {...props} />}
       </div>
     </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Page } from '../types';
 import { WaterDropIcon } from '../components/Icons';
@@ -17,7 +16,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ navigateTo, onLogin }) => {
     e.preventDefault();
     const success = onLogin(usernameOrEmail, password);
     if (!success) {
-      setError('Invalid username or password.');
+      setError('Invalid username/email or password.');
     }
   };
 
@@ -48,7 +47,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ navigateTo, onLogin }) => {
                 autoComplete="username"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                placeholder="Username or Email address"
+                placeholder="Mobile or Email address"
                 value={usernameOrEmail}
                 onChange={(e) => setUsernameOrEmail(e.target.value)}
               />
@@ -68,11 +67,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ navigateTo, onLogin }) => {
             </div>
           </div>
           {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-end">
             <div className="text-sm">
-              <a href="#" className="font-medium text-primary hover:text-primary-dark">
+              <button
+                type="button"
+                onClick={() => navigateTo(Page.FORGOT_PASSWORD)}
+                className="font-medium text-primary hover:text-primary-dark"
+              >
                 Forgot your password?
-              </a>
+              </button>
             </div>
           </div>
           <div>
