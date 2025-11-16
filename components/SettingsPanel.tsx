@@ -115,7 +115,6 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                             step="0.01"
                             className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                         />
-                         {/* FIX: Corrected a typo in the closing tag. It was </e-button> and has been changed to </button>. */}
                          <button onClick={handlePriceUpdate} className="px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700">Update</button>
                     </div>
                 </div>
