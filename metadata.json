@@ -1,0 +1,5 @@
+{
+  "name": "AquaFlow - Water Booking",
+  "description": "A modern and efficient platform for scheduling water gallon pickups and refills. Users can easily book services, track their orders, and manage their accounts, while administrators can oversee all bookings and manage operations.",
+  "requestFramePermissions": []
+}

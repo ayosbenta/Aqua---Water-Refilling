@@ -1,0 +1,51 @@
+export enum Page {
+  LANDING = 'LANDING',
+  LOGIN = 'LOGIN',
+  REGISTER = 'REGISTER',
+  USER_DASHBOARD = 'USER_DASHBOARD',
+  ADMIN_DASHBOARD = 'ADMIN_DASHBOARD',
+  CREATE_BOOKING = 'CREATE_BOOKING',
+  BOOKING_DETAILS = 'BOOKING_DETAILS',
+}
+
+export enum UserType {
+  CUSTOMER = 'CUSTOMER',
+  ADMIN = 'ADMIN',
+  RIDER = 'RIDER',
+}
+
+export interface User {
+  id: string;
+  fullName: string;
+  mobile: string;
+  email: string;
+  type: UserType;
+}
+
+export type GallonType = string;
+export type TimeSlot = string;
+export type BookingStatus = 'Pending' | 'Accepted' | 'Picked Up' | 'Refilled' | 'Out for Delivery' | 'Completed' | 'Cancelled';
+export type PaymentMethod = 'Cash on Delivery' | 'Cash' | 'GCash';
+
+export interface Booking {
+  id: string;
+  userId: string;
+  gallonCount: number;
+  gallonType: GallonType;
+  pickupAddress: string;
+  pickupDate: string;
+  timeSlot: TimeSlot;
+  notes?: string;
+  status: BookingStatus;
+  deliveryOption: boolean;
+  createdAt: Date;
+  completedAt?: Date;
+  price?: number;
+  paymentMethod: PaymentMethod;
+}
+
+export interface Rider {
+  id: string;
+  name: string;
+  mobile: string;
+}
