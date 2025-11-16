@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Booking, User, BookingStatus } from '../types';
-import { ClipboardListIcon, CheckCircleIcon, ClockIcon, CurrencyDollarIcon } from './Icons';
+import { ClipboardListIcon, CheckCircleIcon, ClockIcon, CurrencyDollarIcon, WaterDropIcon, TagIcon } from './Icons';
 import Pagination from './Pagination';
 
 interface OverviewDashboardProps {
@@ -37,11 +37,16 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ bookings, users }
   const stats = useMemo(() => {
     const completedBookings = bookings.filter(b => b.status === 'Completed');
     const totalRevenue = completedBookings.reduce((sum, b) => sum + (b.price || 0), 0);
+    const totalRefills = completedBookings.reduce((sum, b) => sum + b.gallonCount, 0);
+    const totalNewGallons = completedBookings.reduce((sum, b) => sum + (b.newGallonPurchaseCount || 0), 0);
+    
     return {
       totalBookings: bookings.length,
       completed: completedBookings.length,
       pending: bookings.filter(b => b.status === 'Pending').length,
       revenue: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'PHP' }),
+      totalRefills,
+      totalNewGallons,
     };
   }, [bookings]);
   
@@ -57,11 +62,13 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ bookings, users }
 
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <StatCard title="Total Bookings" value={stats.totalBookings} icon={<ClipboardListIcon className="h-6 w-6 text-blue-600" />} color="bg-blue-100" />
         <StatCard title="Completed Orders" value={stats.completed} icon={<CheckCircleIcon className="h-6 w-6 text-green-600" />} color="bg-green-100" />
         <StatCard title="Pending Requests" value={stats.pending} icon={<ClockIcon className="h-6 w-6 text-yellow-600" />} color="bg-yellow-100" />
         <StatCard title="Total Revenue" value={stats.revenue} icon={<CurrencyDollarIcon className="h-6 w-6 text-indigo-600" />} color="bg-indigo-100" />
+        <StatCard title="Total Refills" value={stats.totalRefills} icon={<WaterDropIcon className="h-6 w-6 text-cyan-600" />} color="bg-cyan-100" />
+        <StatCard title="New Gallons Sold" value={stats.totalNewGallons} icon={<TagIcon className="h-6 w-6 text-orange-600" />} color="bg-orange-100" />
       </div>
       
       <div className="bg-white p-6 rounded-lg shadow-sm">
