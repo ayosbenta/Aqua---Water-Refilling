@@ -11,7 +11,7 @@ interface CreateBookingPageProps {
 }
 
 const CreateBookingPage: React.FC<CreateBookingPageProps> = ({ addBooking, navigateTo, gallonTypes, timeSlots, gallonPrice, newGallonPrice }) => {
-    const [gallonCount, setGallonCount] = useState(1);
+    const [totalGallons, setTotalGallons] = useState(1);
     const [newGallonPurchaseCount, setNewGallonPurchaseCount] = useState(0);
     const [gallonType, setGallonType] = useState<GallonType>(gallonTypes[0] || '');
     const [pickupAddress, setPickupAddress] = useState('');
@@ -21,7 +21,21 @@ const CreateBookingPage: React.FC<CreateBookingPageProps> = ({ addBooking, navig
     const [notes, setNotes] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash on Delivery');
 
-    const totalAmount = (gallonCount * gallonPrice) + (newGallonPurchaseCount * newGallonPrice);
+    const handleTotalGallonsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newTotal = Math.max(1, parseInt(e.target.value) || 1);
+        setTotalGallons(newTotal);
+        if (newGallonPurchaseCount > newTotal) {
+            setNewGallonPurchaseCount(newTotal);
+        }
+    };
+    
+    const handleNewGallonsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newPurchaseCount = Math.max(0, parseInt(e.target.value) || 0);
+        setNewGallonPurchaseCount(Math.min(newPurchaseCount, totalGallons));
+    };
+
+    const refillCount = totalGallons - newGallonPurchaseCount;
+    const totalAmount = (refillCount * gallonPrice) + (newGallonPurchaseCount * newGallonPrice);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -34,7 +48,7 @@ const CreateBookingPage: React.FC<CreateBookingPageProps> = ({ addBooking, navig
             return;
         }
         addBooking({
-            gallonCount,
+            gallonCount: refillCount,
             newGallonPurchaseCount,
             gallonType,
             pickupAddress,
@@ -64,14 +78,18 @@ const CreateBookingPage: React.FC<CreateBookingPageProps> = ({ addBooking, navig
                     </div>
 
                     <div>
-                        <label htmlFor="gallonCount" className="block text-sm font-medium text-gray-700">Number of Gallons for Refill</label>
-                        <input type="number" id="gallonCount" value={gallonCount} onChange={e => setGallonCount(Math.max(1, parseInt(e.target.value)))} min="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                        <label htmlFor="totalGallons" className="block text-sm font-medium text-gray-700">Total Gallons of Water Needed</label>
+                        <input type="number" id="totalGallons" value={totalGallons} onChange={handleTotalGallonsChange} min="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                     </div>
 
-                     <div>
-                        <label htmlFor="newGallonPurchaseCount" className="block text-sm font-medium text-gray-700">Purchase New Empty Gallons (Optional)</label>
-                        <input type="number" id="newGallonPurchaseCount" value={newGallonPurchaseCount} onChange={e => setNewGallonPurchaseCount(Math.max(0, parseInt(e.target.value)))} min="0" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
-                         <p className="mt-1 text-xs text-gray-500">Price: {newGallonPrice.toLocaleString('en-US', { style: 'currency', currency: 'PHP' })} per gallon</p>
+                    <div>
+                        <label htmlFor="newGallonPurchaseCount" className="block text-sm font-medium text-gray-700">Of which, how many are new gallons?</label>
+                        <input type="number" id="newGallonPurchaseCount" value={newGallonPurchaseCount} onChange={handleNewGallonsChange} min="0" max={totalGallons} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                        <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                            <p>Refilling your containers: <span className="font-semibold">{refillCount} gallon(s)</span></p>
+                            <p>Purchasing new gallons: <span className="font-semibold">{newGallonPurchaseCount} gallon(s)</span></p>
+                            <p className="text-xs text-gray-500 mt-1">Price per new gallon: {newGallonPrice.toLocaleString('en-US', { style: 'currency', currency: 'PHP' })}</p>
+                        </div>
                     </div>
 
                     <div>
