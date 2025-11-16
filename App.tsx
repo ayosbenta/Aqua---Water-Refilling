@@ -90,29 +90,45 @@ const App: React.FC = () => {
     setCurrentPage(page);
   }, []);
   
-  const sendDataToSheet = async (payload: any, dataType: 'booking' | 'user' | 'settings') => {
+  const sendDataToSheet = async (payload: any, dataType: 'booking' | 'user' | 'settings'): Promise<boolean> => {
     try {
-      await fetch(APP_SCRIPT_URL, {
+      const response = await fetch(APP_SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dataType, payload }),
-        mode: 'no-cors',
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Request failed with status ${response.status}. Body: ${errorText}`);
+      }
+
       console.log(`${dataType} data sent to Google Sheets.`);
+      return true; // Indicate success
     } catch (error) {
       console.error(`Failed to send ${dataType} data to Google Sheets:`, error);
+      return false; // Indicate failure
     }
   };
 
-  const handleRegister = (newUser: Omit<User, 'id'>) => {
+  const handleRegister = async (newUser: Omit<User, 'id'>) => {
     const user: User = {
       ...newUser,
       id: `U${Date.now().toString(36)}`,
     };
-    setUsers(prev => [...prev, user]);
-    sendDataToSheet(user, 'user');
-    alert('Registration successful! Please log in.');
-    navigateTo(Page.LOGIN);
+
+    // First, try to save the user to the single source of truth (Google Sheets)
+    const success = await sendDataToSheet(user, 'user');
+
+    if (success) {
+      // If saving was successful, update the local state and proceed
+      setUsers(prev => [...prev, user]);
+      alert('Registration successful! Please log in.');
+      navigateTo(Page.LOGIN);
+    } else {
+      // If saving failed, inform the user
+      alert('Registration failed. Could not save your information. Please try again.');
+    }
   };
 
   const handleLogin = useCallback((usernameOrEmail: string, password: string): boolean => {
@@ -188,7 +204,7 @@ const App: React.FC = () => {
     navigateTo(Page.LANDING);
   }, [navigateTo]);
 
-  const addBooking = (newBooking: Omit<Booking, 'id' | 'status' | 'userId'>) => {
+  const addBooking = async (newBooking: Omit<Booking, 'id' | 'status' | 'userId'>) => {
     if (!currentUser) return;
     const booking: Booking = {
       id: `B${Date.now().toString(36)}`,
@@ -197,9 +213,13 @@ const App: React.FC = () => {
       status: 'Pending',
       price: (newBooking.gallonCount * gallonPrice) + ((newBooking.newGallonPurchaseCount || 0) * newGallonPrice),
     };
-    setBookings(prev => [booking, ...prev]);
-    sendDataToSheet(booking, 'booking');
-    navigateTo(Page.USER_DASHBOARD);
+     const success = await sendDataToSheet(booking, 'booking');
+     if (success) {
+        setBookings(prev => [booking, ...prev]);
+        navigateTo(Page.USER_DASHBOARD);
+     } else {
+        alert("Failed to create booking. Please try again.");
+     }
   };
   
   const updateBookingStatus = (bookingId: string, status: Booking['status']) => {
