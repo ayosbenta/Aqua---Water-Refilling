@@ -44,7 +44,16 @@ const App: React.FC = () => {
             }
             const data = await response.json();
             
-            setUsers(data.users && Array.isArray(data.users) ? data.users : []);
+            if (data.users && Array.isArray(data.users)) {
+                 const normalizedUsers = data.users.map((user: any) => ({
+                    ...user,
+                    // Spreadsheets can return numbers for mobile numbers; ensure it's a string for consistent comparison.
+                    mobile: user.mobile ? String(user.mobile) : '',
+                }));
+                setUsers(normalizedUsers);
+            } else {
+                setUsers([]);
+            }
 
             if (data.bookings && Array.isArray(data.bookings)) {
                  const formattedBookings = data.bookings.map((b: any) => ({
