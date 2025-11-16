@@ -19,59 +19,13 @@ const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxxRTMd3Lls97b4_
 const hashPassword = (password: string): string => btoa(password);
 const verifyPassword = (password: string, hash: string): boolean => hashPassword(password) === hash;
 
-/**
- * A custom hook to manage state persistence in localStorage.
- * It synchronizes a state value with localStorage, ensuring data is saved and loaded reliably.
- */
-function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      if (item) {
-        const parsedItem = JSON.parse(item);
-        // Special hydration for bookings to restore Date objects which are lost in JSON serialization
-        if (key === 'aquaFlowBookings' && Array.isArray(parsedItem)) {
-            return parsedItem.map((b: any) => ({
-                ...b,
-                createdAt: new Date(b.createdAt),
-                completedAt: b.completedAt ? new Date(b.completedAt) : undefined,
-            })) as unknown as T;
-        }
-        return parsedItem;
-      }
-    } catch (error) {
-      console.error(`Error reading localStorage key “${key}”:`, error);
-    }
-
-    // If item doesn't exist or parsing failed, initialize it in storage and return the initial value
-    window.localStorage.setItem(key, JSON.stringify(initialValue));
-    return initialValue;
-  });
-
-  const setValue = (value: T | ((val: T) => T)) => {
-    try {
-      // Allow value to be a function (like in standard useState)
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      // Update state
-      setStoredValue(valueToStore);
-      // Persist to localStorage
-      window.localStorage.setItem(key, JSON.stringify(valueToStore));
-    } catch (error) {
-      console.error(`Error setting localStorage key “${key}”:`, error);
-    }
-  };
-
-  return [storedValue, setValue];
-}
-
-
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(Page.LANDING);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // --- State Persistence with more robust custom hook ---
-  const [users, setUsers] = useLocalStorage<User[]>('aquaFlowUsers', MOCK_USERS);
-  const [bookings, setBookings] = useLocalStorage<Booking[]>('aquaFlowBookings', MOCK_BOOKINGS);
+  // --- State is now managed in-memory, initialized with mock data on each load ---
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS);
 
   // Password reset state
   const [passwordResetState, setPasswordResetState] = useState<{ email: string | null; code: string | null; }>({ email: null, code: null });
