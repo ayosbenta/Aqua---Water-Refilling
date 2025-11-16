@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useMemo } from 'react';
+
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Page, User, UserType, Booking, GallonType, TimeSlot } from './types';
 import { MOCK_USERS, MOCK_BOOKINGS } from './constants';
 
@@ -22,10 +23,11 @@ const verifyPassword = (password: string, hash: string): boolean => hashPassword
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(Page.LANDING);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // --- State is now managed in-memory, initialized with mock data on each load ---
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
-  const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS);
+  // --- State is now managed in-memory, initialized from Google Sheets ---
+  const [users, setUsers] = useState<User[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
 
   // Password reset state
   const [passwordResetState, setPasswordResetState] = useState<{ email: string | null; code: string | null; }>({ email: null, code: null });
@@ -34,6 +36,47 @@ const App: React.FC = () => {
   const [gallonTypes, setGallonTypes] = useState<GallonType[]>(['Slim', 'Round', '5G']);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>(['9am–12pm', '1pm–5pm']);
   const [gallonPrice, setGallonPrice] = useState<number>(25);
+
+  useEffect(() => {
+    const fetchDataFromSheet = async () => {
+        try {
+            // Assumes the Apps Script is set up to handle GET requests and has CORS enabled.
+            const response = await fetch(`${APP_SCRIPT_URL}?action=getAllData`);
+            if (!response.ok) {
+                throw new Error(`Network response was not ok: ${response.statusText}`);
+            }
+            const data = await response.json();
+            
+            if (data.users && Array.isArray(data.users)) {
+                setUsers(data.users);
+            } else {
+                 console.warn("No 'users' array in fetched data, using mock users.");
+                 setUsers(MOCK_USERS);
+            }
+
+            if (data.bookings && Array.isArray(data.bookings)) {
+                 const formattedBookings = data.bookings.map((b: any) => ({
+                    ...b,
+                    createdAt: new Date(b.createdAt),
+                    completedAt: b.completedAt ? new Date(b.completedAt) : undefined,
+                }));
+                setBookings(formattedBookings);
+            } else {
+                 console.warn("No 'bookings' array in fetched data, using mock bookings.");
+                 setBookings(MOCK_BOOKINGS);
+            }
+
+        } catch (error) {
+            console.error("Failed to fetch data from Google Sheets, using mock data as fallback:", error);
+            setUsers(MOCK_USERS);
+            setBookings(MOCK_BOOKINGS);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    fetchDataFromSheet();
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   const navigateTo = useCallback((page: Page) => {
     setCurrentPage(page);
@@ -53,15 +96,17 @@ const App: React.FC = () => {
     }
   };
 
-  const handleRegister = async (newUser: Omit<User, 'id' | 'type'>) => {
+  const handleRegister = (newUser: Omit<User, 'id' | 'type'>) => {
     const user: User = {
       ...newUser,
       id: `U${Date.now().toString(36)}`,
       type: UserType.CUSTOMER,
       password: hashPassword(newUser.password), // Hash the password
     };
-    await sendDataToSheet(user, 'user');
+    // Optimistically update local state for immediate login capability
     setUsers(prev => [...prev, user]);
+    // Send data to sheet in the background
+    sendDataToSheet(user, 'user');
     alert('Registration successful! Please log in.');
     navigateTo(Page.LOGIN);
   };
@@ -115,13 +160,13 @@ const App: React.FC = () => {
           password: hashPassword(newPassword),
         };
         
-        // Send updated user data to sheet
-        await sendDataToSheet(updatedUser, 'user');
-
-        // Update local state
+        // Update local state first for responsiveness
         const updatedUsers = [...users];
         updatedUsers[userIndex] = updatedUser;
         setUsers(updatedUsers);
+        
+        // Send updated user data to sheet
+        sendDataToSheet(updatedUser, 'user');
         
         alert("Password has been reset successfully. Please log in with your new password.");
         setPasswordResetState({ email: null, code: null }); // Clear reset state
@@ -137,7 +182,7 @@ const App: React.FC = () => {
     navigateTo(Page.LANDING);
   }, [navigateTo]);
 
-  const addBooking = async (newBooking: Omit<Booking, 'id' | 'status' | 'userId'>) => {
+  const addBooking = (newBooking: Omit<Booking, 'id' | 'status' | 'userId'>) => {
     if (!currentUser) return;
     const booking: Booking = {
       id: `B${Date.now().toString(36)}`,
@@ -146,12 +191,14 @@ const App: React.FC = () => {
       status: 'Pending',
       price: newBooking.gallonCount * gallonPrice,
     };
-    await sendDataToSheet(booking, 'booking');
+    // Optimistically update local state
     setBookings(prev => [booking, ...prev]);
+    // Send data to sheet in the background
+    sendDataToSheet(booking, 'booking');
     navigateTo(Page.USER_DASHBOARD);
   };
   
-  const updateBookingStatus = async (bookingId: string, status: Booking['status']) => {
+  const updateBookingStatus = (bookingId: string, status: Booking['status']) => {
     const bookingToUpdate = bookings.find(b => b.id === bookingId);
     if (!bookingToUpdate) return;
     
@@ -161,8 +208,10 @@ const App: React.FC = () => {
       ...(status === 'Completed' && { completedAt: new Date() })
     };
     
-    await sendDataToSheet(updatedBooking, 'booking');
+    // Optimistic update
     setBookings(prev => prev.map(b => (b.id === bookingId ? updatedBooking : b)));
+    // Send to sheet in the background
+    sendDataToSheet(updatedBooking, 'booking');
   };
 
   const addGallonType = (type: GallonType) => { if (type && !gallonTypes.includes(type)) setGallonTypes(prev => [...prev, type]); };
@@ -186,6 +235,21 @@ const App: React.FC = () => {
       default: return <LandingPage navigateTo={navigateTo} />;
     }
   };
+
+  if (isLoading) {
+    return (
+        <div className="flex justify-center items-center min-h-screen bg-secondary">
+            <div className="text-center">
+                 <svg className="mx-auto h-12 w-12 text-primary animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <h2 className="mt-6 text-2xl font-semibold text-gray-700">Loading Your Data...</h2>
+                <p className="mt-2 text-gray-500">Please wait a moment.</p>
+            </div>
+        </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
