@@ -1,9 +1,8 @@
+
 import { User, Booking, UserType, Rider } from './types';
 
-// Note: Passwords are "hashed" using Base64 for simulation purposes.
-// 'M@y191992' -> 'TUA5MTkxOTI='
-// 'password123' -> 'cGFzc3dvcmQxMjM='
-// 'admin123' -> 'YWRtaW4xMjM='
+// Note: Passwords are saved in plain text for demonstration purposes.
+// In a real application, passwords should always be securely hashed.
 
 export const MOCK_USERS: User[] = [
   {
@@ -11,7 +10,7 @@ export const MOCK_USERS: User[] = [
     fullName: 'Ryan Zkey',
     mobile: '09171234567',
     email: 'ryanzkey@gmail.com',
-    password: 'TUA5MTkxOTI=', // Hashed 'M@y191992'
+    password: 'M@y191992',
     type: UserType.CUSTOMER,
   },
   {
@@ -19,7 +18,7 @@ export const MOCK_USERS: User[] = [
     fullName: 'Jane Smith',
     mobile: '09187654321',
     email: 'jane.smith@email.com',
-    password: 'cGFzc3dvcmQxMjM=', // Hashed 'password123'
+    password: 'password123',
     type: UserType.CUSTOMER,
   },
   {
@@ -27,7 +26,7 @@ export const MOCK_USERS: User[] = [
     fullName: 'Admin User',
     mobile: '09201112222',
     email: 'admin@aquaflow.com',
-    password: 'YWRtaW4xMjM=', // Hashed 'admin123'
+    password: 'admin',
     type: UserType.ADMIN,
   },
 ];

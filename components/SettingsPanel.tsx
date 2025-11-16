@@ -6,11 +6,13 @@ interface SettingsPanelProps {
   gallonTypes: GallonType[];
   timeSlots: TimeSlot[];
   gallonPrice: number;
+  newGallonPrice: number;
   onAddGallonType: (type: GallonType) => void;
   onRemoveGallonType: (type: GallonType) => void;
   onAddTimeSlot: (slot: TimeSlot) => void;
   onRemoveTimeSlot: (slot: TimeSlot) => void;
   onUpdateGallonPrice: (price: number) => void;
+  onUpdateNewGallonPrice: (price: number) => void;
 }
 
 const SettingsCard: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
@@ -24,15 +26,18 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   gallonTypes,
   timeSlots,
   gallonPrice,
+  newGallonPrice,
   onAddGallonType,
   onRemoveGallonType,
   onAddTimeSlot,
   onRemoveTimeSlot,
   onUpdateGallonPrice,
+  onUpdateNewGallonPrice,
 }) => {
   const [newGallonType, setNewGallonType] = useState('');
   const [newTimeSlot, setNewTimeSlot] = useState('');
   const [price, setPrice] = useState(gallonPrice);
+  const [newEmptyGallonPrice, setNewEmptyGallonPrice] = useState(newGallonPrice);
 
   const handleAddGallonType = () => {
     onAddGallonType(newGallonType.trim());
@@ -46,8 +51,14 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   const handlePriceUpdate = () => {
     onUpdateGallonPrice(price);
-    alert('Price updated!');
+    alert('Refill price updated!');
   };
+
+  const handleNewGallonPriceUpdate = () => {
+    onUpdateNewGallonPrice(newEmptyGallonPrice);
+    alert('New gallon price updated!');
+  };
+
 
   return (
     <div>
@@ -102,9 +113,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </div>
             </SettingsCard>
             
-             <SettingsCard title="Manage Pricing">
+            <SettingsCard title="Manage Pricing">
                 <div>
-                    <label htmlFor="gallonPrice" className="block text-sm font-medium text-gray-700 mb-1">Price per Gallon (PHP)</label>
+                    <label htmlFor="gallonPrice" className="block text-sm font-medium text-gray-700 mb-1">Price per Gallon (Refill)</label>
                     <div className="flex gap-2">
                         <input
                             type="number"
@@ -116,6 +127,21 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                             className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                         />
                          <button onClick={handlePriceUpdate} className="px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700">Update</button>
+                    </div>
+                </div>
+                 <div className="pt-4">
+                    <label htmlFor="newGallonPrice" className="block text-sm font-medium text-gray-700 mb-1">Price per New Empty Gallon</label>
+                    <div className="flex gap-2">
+                        <input
+                            type="number"
+                            id="newGallonPrice"
+                            value={newEmptyGallonPrice}
+                            onChange={(e) => setNewEmptyGallonPrice(Number(e.target.value))}
+                            min="0"
+                            step="1"
+                            className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                        />
+                        <button onClick={handleNewGallonPriceUpdate} className="px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700">Update</button>
                     </div>
                 </div>
             </SettingsCard>

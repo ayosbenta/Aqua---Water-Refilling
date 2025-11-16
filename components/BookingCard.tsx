@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Booking, BookingStatus } from '../types';
 import { CalendarIcon, ClockIcon, LocationMarkerIcon, TagIcon, WaterDropIcon, CheckCircleIcon, XCircleIcon, TruckIcon, CurrencyDollarIcon, CreditCardIcon } from './Icons';
@@ -51,7 +50,10 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, isAdminView = false,
         <div className="flex justify-between items-start">
           <div>
             <p className="text-sm font-medium text-primary-dark">Booking ID: {booking.id}</p>
-            <p className="text-2xl font-bold text-gray-800 mt-1">{booking.gallonCount} x {booking.gallonType} Gallons</p>
+            <p className="text-2xl font-bold text-gray-800 mt-1">{booking.gallonCount} x {booking.gallonType} (Refill)</p>
+            {booking.newGallonPurchaseCount && booking.newGallonPurchaseCount > 0 && (
+                 <p className="text-xl font-bold text-gray-700 mt-1">{booking.newGallonPurchaseCount} x New Gallon(s)</p>
+            )}
           </div>
           <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${color}`}>
             <StatusIcon className="h-4 w-4" />

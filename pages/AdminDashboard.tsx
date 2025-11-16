@@ -12,11 +12,13 @@ interface AdminDashboardProps {
   gallonTypes: GallonType[];
   timeSlots: TimeSlot[];
   gallonPrice: number;
+  newGallonPrice: number;
   onAddGallonType: (type: GallonType) => void;
   onRemoveGallonType: (type: GallonType) => void;
   onAddTimeSlot: (slot: TimeSlot) => void;
   onRemoveTimeSlot: (slot: TimeSlot) => void;
   onUpdateGallonPrice: (price: number) => void;
+  onUpdateNewGallonPrice: (price: number) => void;
 }
 
 type MainTab = 'overview' | 'manage' | 'payments' | 'settings';

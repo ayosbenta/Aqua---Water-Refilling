@@ -34,6 +34,7 @@ export interface Booking {
   id: string;
   userId: string;
   gallonCount: number;
+  newGallonPurchaseCount?: number;
   gallonType: GallonType;
   pickupAddress: string;
   pickupDate: string;

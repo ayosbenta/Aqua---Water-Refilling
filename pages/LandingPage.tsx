@@ -26,10 +26,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ navigateTo }) => {
         </div>
         <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 text-center">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-primary-dark tracking-tight">
-            Pure Water, Delivered Right to Your Door.
+            Book Your Water Gallon Refills with Ease.
           </h1>
           <p className="mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-gray-600">
-            Book your water gallon pickup and refilling service online. It's fast, easy, and reliable.
+            Clean, safe drinking water delivered directly to you. Schedule your pickup and refill service in just a few clicks.
           </p>
           <div className="mt-8">
             <button

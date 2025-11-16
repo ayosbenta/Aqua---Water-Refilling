@@ -16,10 +16,6 @@ import Header from './components/Header';
 // The URL for the Google Apps Script Web App
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxxRTMd3Lls97b4_XJf1fOoaSF8_J4V_VwCpMuaVUQ2PiHpxNIk96YVTs1Idv1hPk7D/exec';
 
-// --- Password Hashing Simulation ---
-const hashPassword = (password: string): string => btoa(password);
-const verifyPassword = (password: string, hash: string): boolean => hashPassword(password) === hash;
-
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(Page.LANDING);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -36,6 +32,7 @@ const App: React.FC = () => {
   const [gallonTypes, setGallonTypes] = useState<GallonType[]>(['Slim', 'Round', '5G']);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>(['9am–12pm', '1pm–5pm']);
   const [gallonPrice, setGallonPrice] = useState<number>(25);
+  const [newGallonPrice, setNewGallonPrice] = useState<number>(150);
 
   useEffect(() => {
     const fetchDataFromSheet = async () => {
@@ -101,7 +98,7 @@ const App: React.FC = () => {
       ...newUser,
       id: `U${Date.now().toString(36)}`,
       type: UserType.CUSTOMER,
-      password: hashPassword(newUser.password), // Hash the password
+      password: newUser.password, // Store plain text password
     };
     // Optimistically update local state for immediate login capability
     setUsers(prev => [...prev, user]);
@@ -114,25 +111,18 @@ const App: React.FC = () => {
   const handleLogin = useCallback((usernameOrEmail: string, password: string): boolean => {
     const normalizedInput = usernameOrEmail.toLowerCase();
     
-    // Admin Login
-    if (normalizedInput === 'admin@aquaflow.com' && password === 'admin123') {
-       const adminUser = users.find(u => u.type === UserType.ADMIN);
-       if(adminUser) {
-           setCurrentUser(adminUser);
-           navigateTo(Page.ADMIN_DASHBOARD);
-           return true;
-       }
-    }
-
-    // Customer Login
-    const foundUser = users.find(
-      u => (u.email?.toLowerCase() === normalizedInput || u.mobile === normalizedInput) && u.type === UserType.CUSTOMER
-    );
+    // Find user by email, mobile, or special 'admin' username
+    const foundUser = users.find(user => {
+        if (user.type === UserType.ADMIN && normalizedInput === 'admin') {
+            return true;
+        }
+        return user.email?.toLowerCase() === normalizedInput || user.mobile === normalizedInput;
+    });
     
-    if (foundUser && verifyPassword(password, foundUser.password)) {
-      setCurrentUser(foundUser);
-      navigateTo(Page.USER_DASHBOARD);
-      return true;
+    if (foundUser && foundUser.password === password) {
+        setCurrentUser(foundUser);
+        navigateTo(foundUser.type === UserType.ADMIN ? Page.ADMIN_DASHBOARD : Page.USER_DASHBOARD);
+        return true;
     }
     
     return false; // Login failed
@@ -157,7 +147,7 @@ const App: React.FC = () => {
       if (userIndex !== -1) {
         const updatedUser = {
           ...users[userIndex],
-          password: hashPassword(newPassword),
+          password: newPassword, // Store plain text password
         };
         
         // Update local state first for responsiveness
@@ -189,7 +179,7 @@ const App: React.FC = () => {
       ...newBooking,
       userId: currentUser.id,
       status: 'Pending',
-      price: newBooking.gallonCount * gallonPrice,
+      price: (newBooking.gallonCount * gallonPrice) + ((newBooking.newGallonPurchaseCount || 0) * newGallonPrice),
     };
     // Optimistically update local state
     setBookings(prev => [booking, ...prev]);
@@ -219,6 +209,7 @@ const App: React.FC = () => {
   const addTimeSlot = (slot: TimeSlot) => { if (slot && !timeSlots.includes(slot)) setTimeSlots(prev => [...prev, slot]); };
   const removeTimeSlot = (slot: TimeSlot) => setTimeSlots(prev => prev.filter(s => s !== slot));
   const updateGallonPrice = (newPrice: number) => { if (newPrice >= 0) setGallonPrice(newPrice); };
+  const updateNewGallonPrice = (newPrice: number) => { if (newPrice >= 0) setNewGallonPrice(newPrice); };
 
   const userBookings = useMemo(() => currentUser ? bookings.filter(b => b.userId === currentUser.id) : [], [currentUser, bookings]);
 
@@ -230,8 +221,8 @@ const App: React.FC = () => {
       case Page.FORGOT_PASSWORD: return <ForgotPasswordPage navigateTo={navigateTo} onForgotPasswordRequest={handleForgotPasswordRequest} />;
       case Page.RESET_PASSWORD: return <ResetPasswordPage navigateTo={navigateTo} onResetPassword={handleResetPassword} initialEmail={passwordResetState.email || ''} />;
       case Page.USER_DASHBOARD: return currentUser && <UserDashboard bookings={userBookings} navigateTo={navigateTo} />;
-      case Page.ADMIN_DASHBOARD: return <AdminDashboard allBookings={bookings} users={users} updateBookingStatus={updateBookingStatus} gallonTypes={gallonTypes} timeSlots={timeSlots} gallonPrice={gallonPrice} onAddGallonType={addGallonType} onRemoveGallonType={removeGallonType} onAddTimeSlot={addTimeSlot} onRemoveTimeSlot={removeTimeSlot} onUpdateGallonPrice={updateGallonPrice} />;
-      case Page.CREATE_BOOKING: return <CreateBookingPage addBooking={addBooking} navigateTo={navigateTo} gallonTypes={gallonTypes} timeSlots={timeSlots} gallonPrice={gallonPrice} />;
+      case Page.ADMIN_DASHBOARD: return <AdminDashboard allBookings={bookings} users={users} updateBookingStatus={updateBookingStatus} gallonTypes={gallonTypes} timeSlots={timeSlots} gallonPrice={gallonPrice} newGallonPrice={newGallonPrice} onAddGallonType={addGallonType} onRemoveGallonType={removeGallonType} onAddTimeSlot={addTimeSlot} onRemoveTimeSlot={removeTimeSlot} onUpdateGallonPrice={updateGallonPrice} onUpdateNewGallonPrice={updateNewGallonPrice} />;
+      case Page.CREATE_BOOKING: return <CreateBookingPage addBooking={addBooking} navigateTo={navigateTo} gallonTypes={gallonTypes} timeSlots={timeSlots} gallonPrice={gallonPrice} newGallonPrice={newGallonPrice} />;
       default: return <LandingPage navigateTo={navigateTo} />;
     }
   };
