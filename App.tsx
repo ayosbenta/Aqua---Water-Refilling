@@ -94,7 +94,9 @@ const App: React.FC = () => {
     try {
       const response = await fetch(APP_SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // Using text/plain avoids a CORS preflight request which can be problematic with Google Apps Script.
+        // The Apps Script must be configured to parse the JSON string from the request body.
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ dataType, payload }),
       });
 
