@@ -11,13 +11,24 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ isLoggedIn, userType, onLogout, navigateTo }) => {
+
+  const getDashboardPage = () => {
+    if (!isLoggedIn) return Page.LANDING;
+    switch (userType) {
+      case UserType.ADMIN: return Page.ADMIN_DASHBOARD;
+      case UserType.RIDER: return Page.RIDER_DASHBOARD;
+      case UserType.CUSTOMER: return Page.USER_DASHBOARD;
+      default: return Page.LANDING;
+    }
+  };
+
   return (
     <header className="bg-white/80 backdrop-blur-lg shadow-sm fixed top-0 left-0 right-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div
             className="flex items-center gap-2 cursor-pointer"
-            onClick={() => navigateTo(isLoggedIn ? (userType === UserType.ADMIN ? Page.ADMIN_DASHBOARD : Page.USER_DASHBOARD) : Page.LANDING)}
+            onClick={() => navigateTo(getDashboardPage())}
           >
             <WaterDropIcon className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold text-primary-dark">AquaFlow</span>
@@ -39,6 +50,14 @@ const Header: React.FC<HeaderProps> = ({ isLoggedIn, userType, onLogout, navigat
                     className="text-gray-600 hover:text-primary-dark font-medium transition-colors"
                   >
                     Admin Panel
+                  </button>
+                )}
+                 {userType === UserType.RIDER && (
+                   <button
+                    onClick={() => navigateTo(Page.RIDER_DASHBOARD)}
+                    className="text-gray-600 hover:text-primary-dark font-medium transition-colors"
+                  >
+                    Rider Dashboard
                   </button>
                 )}
                 <button

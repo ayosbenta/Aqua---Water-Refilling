@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo } from 'react';
-import { Booking, BookingStatus, GallonType, TimeSlot, User } from '../types';
+import { Booking, BookingStatus, GallonType, TimeSlot, User, UserType } from '../types';
 import BookingCard from '../components/BookingCard';
 import OverviewDashboard from '../components/OverviewDashboard';
 import SettingsPanel from '../components/SettingsPanel';
@@ -9,6 +10,7 @@ interface AdminDashboardProps {
   allBookings: Booking[];
   users: User[];
   updateBookingStatus: (id: string, status: BookingStatus) => void;
+  updateUserType: (id: string, type: UserType) => void;
   gallonTypes: GallonType[];
   timeSlots: TimeSlot[];
   gallonPrice: number;
@@ -21,11 +23,11 @@ interface AdminDashboardProps {
   onUpdateNewGallonPrice: (price: number) => void;
 }
 
-type MainTab = 'overview' | 'manage' | 'payments' | 'settings';
+type MainTab = 'overview' | 'manage' | 'payments' | 'settings' | 'users';
 type ManageTab = 'Pending' | 'Active' | 'Completed' | 'Cancelled';
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { allBookings, updateBookingStatus, users } = props;
+  const { allBookings, updateBookingStatus, users, updateUserType } = props;
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('overview');
   const [activeManageTab, setActiveManageTab] = useState<ManageTab>('Pending');
 
@@ -102,6 +104,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     </>
   );
 
+  const renderUserManagement = () => (
+    <div className="bg-white p-6 rounded-lg shadow-sm">
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">Manage Users</h2>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {users.filter(u => u.type !== UserType.ADMIN).map(user => (
+              <tr key={user.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.fullName}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.mobile}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email || 'N/A'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <select
+                    value={user.type}
+                    onChange={(e) => updateUserType(user.id, e.target.value as UserType)}
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
+                  >
+                    <option value={UserType.CUSTOMER}>Customer</option>
+                    <option value={UserType.RIDER}>Rider</option>
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Admin Dashboard</h1>
@@ -110,6 +149,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
             <MainTabButton tabName="overview" label="Overview" />
             <MainTabButton tabName="manage" label="Manage Bookings" />
+            <MainTabButton tabName="users" label="Manage Users" />
             <MainTabButton tabName="payments" label="Payments" />
             <MainTabButton tabName="settings" label="Settings" />
         </nav>
@@ -118,6 +158,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
       <div className="mt-8">
         {activeMainTab === 'overview' && <OverviewDashboard bookings={allBookings} users={users} />}
         {activeMainTab === 'manage' && renderManageBookings()}
+        {activeMainTab === 'users' && renderUserManagement()}
         {activeMainTab === 'payments' && <PaymentsDashboard allBookings={allBookings} users={users} />}
         {activeMainTab === 'settings' && <SettingsPanel {...props} />}
       </div>

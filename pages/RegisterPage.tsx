@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
-import { Page, User } from '../types';
+import { Page, User, UserType } from '../types';
 import { WaterDropIcon } from '../components/Icons';
 
 interface RegisterPageProps {
   navigateTo: (page: Page) => void;
-  onRegister: (newUser: Omit<User, 'id' | 'type'>) => void;
+  onRegister: (newUser: Omit<User, 'id'>) => void;
 }
 
 const RegisterPage: React.FC<RegisterPageProps> = ({ navigateTo, onRegister }) => {
@@ -13,6 +14,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ navigateTo, onRegister }) =
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [userType, setUserType] = useState<UserType>(UserType.CUSTOMER);
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -32,6 +34,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ navigateTo, onRegister }) =
       mobile,
       email,
       password,
+      type: userType,
     });
   };
 
@@ -108,6 +111,20 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ navigateTo, onRegister }) =
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Register as</label>
+            <div className="flex items-center space-x-4">
+                <label className="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50 flex-1">
+                    <input type="radio" name="userType" value={UserType.CUSTOMER} checked={userType === UserType.CUSTOMER} onChange={() => setUserType(UserType.CUSTOMER)} className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"/>
+                    <span className="ml-3 text-sm text-gray-700">Customer</span>
+                </label>
+                <label className="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50 flex-1">
+                    <input type="radio" name="userType" value={UserType.RIDER} checked={userType === UserType.RIDER} onChange={() => setUserType(UserType.RIDER)} className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"/>
+                    <span className="ml-3 text-sm text-gray-700">Rider</span>
+                </label>
             </div>
           </div>
            {error && <p className="text-sm text-red-600 text-center">{error}</p>}
