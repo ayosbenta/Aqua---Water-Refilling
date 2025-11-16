@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Page, User, UserType, Booking, GallonType, TimeSlot } from './types';
 import { MOCK_USERS, MOCK_BOOKINGS } from './constants';
 
@@ -16,9 +16,6 @@ import Header from './components/Header';
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxxRTMd3Lls97b4_XJf1fOoaSF8_J4V_VwCpMuaVUQ2PiHpxNIk96YVTs1Idv1hPk7D/exec';
 
 // --- Password Hashing Simulation ---
-// In a real app, this would be a robust, one-way hashing algorithm like bcrypt,
-// and all hashing/verification would happen on the server.
-// For this simulation, we use Base64 which is reversible but demonstrates the concept.
 const hashPassword = (password: string): string => btoa(password);
 const verifyPassword = (password: string, hash: string): boolean => hashPassword(password) === hash;
 
@@ -26,8 +23,59 @@ const verifyPassword = (password: string, hash: string): boolean => hashPassword
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(Page.LANDING);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
-  const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS);
+
+  // --- State Persistence with localStorage ---
+  const [users, setUsers] = useState<User[]>(() => {
+    try {
+      const localData = localStorage.getItem('aquaFlowUsers');
+      if (localData) {
+        return JSON.parse(localData);
+      }
+      localStorage.setItem('aquaFlowUsers', JSON.stringify(MOCK_USERS));
+      return MOCK_USERS;
+    } catch (error) {
+      console.error("Error reading users from localStorage", error);
+      return MOCK_USERS;
+    }
+  });
+
+  const [bookings, setBookings] = useState<Booking[]>(() => {
+    try {
+      const localData = localStorage.getItem('aquaFlowBookings');
+      if (localData) {
+        const parsedBookings = JSON.parse(localData) as Booking[];
+        return parsedBookings.map(b => ({
+          ...b,
+          createdAt: new Date(b.createdAt),
+          completedAt: b.completedAt ? new Date(b.completedAt) : undefined,
+        }));
+      }
+      localStorage.setItem('aquaFlowBookings', JSON.stringify(MOCK_BOOKINGS));
+      return MOCK_BOOKINGS;
+    } catch (error) {
+      console.error("Error reading bookings from localStorage", error);
+      return MOCK_BOOKINGS;
+    }
+  });
+  
+  // Effect to save users to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('aquaFlowUsers', JSON.stringify(users));
+    } catch (error) {
+      console.error("Error saving users to localStorage", error);
+    }
+  }, [users]);
+  
+  // Effect to save bookings to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('aquaFlowBookings', JSON.stringify(bookings));
+    } catch (error) {
+      console.error("Error saving bookings to localStorage", error);
+    }
+  }, [bookings]);
+
 
   // Password reset state
   const [passwordResetState, setPasswordResetState] = useState<{ email: string | null; code: string | null; }>({ email: null, code: null });
