@@ -38,7 +38,8 @@ const App: React.FC = () => {
     const fetchDataFromSheet = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch(`${APP_SCRIPT_URL}?action=getAllData`);
+            const cacheBuster = `_=${new Date().getTime()}`;
+            const response = await fetch(`${APP_SCRIPT_URL}?action=getAllData&${cacheBuster}`);
             if (!response.ok) {
                 throw new Error(`Network response was not ok: ${response.statusText}`);
             }
@@ -48,7 +49,10 @@ const App: React.FC = () => {
                  const normalizedUsers = data.users.map((user: any) => ({
                     ...user,
                     // Spreadsheets can return numbers for mobile numbers; ensure it's a string for consistent comparison.
-                    mobile: user.mobile ? String(user.mobile) : '',
+                    mobile: user.mobile ? String(user.mobile).trim() : '',
+                    fullName: user.fullName ? String(user.fullName).trim() : '',
+                    email: user.email ? String(user.email).trim() : '',
+                    password: user.password ? String(user.password).trim() : '',
                 }));
                 setUsers(normalizedUsers);
             } else {
@@ -143,10 +147,11 @@ const App: React.FC = () => {
   };
 
   const handleLogin = useCallback((usernameOrEmail: string, password: string): boolean => {
-    const normalizedInput = usernameOrEmail.toLowerCase();
+    const normalizedInput = usernameOrEmail.toLowerCase().trim();
+    const trimmedPassword = password.trim();
     
     // Special case for hardcoded admin login
-    if (normalizedInput === 'admin' && password === 'admin') {
+    if (normalizedInput === 'admin' && trimmedPassword === 'admin') {
         const adminUser: User = {
             id: 'admin-user',
             fullName: 'Administrator',
@@ -165,7 +170,7 @@ const App: React.FC = () => {
         user.email?.toLowerCase() === normalizedInput || user.mobile === normalizedInput
     );
 
-    if (foundUser && foundUser.password === password) {
+    if (foundUser && foundUser.password === trimmedPassword) {
         setCurrentUser(foundUser);
         if (foundUser.type === UserType.RIDER) navigateTo(Page.RIDER_DASHBOARD);
         else navigateTo(Page.USER_DASHBOARD);
