@@ -12,9 +12,17 @@ import CreateBookingPage from './pages/CreateBookingPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import Header from './components/Header';
+import SetupGuide from './components/SetupGuide';
 
-// IMPORTANT: Replace this URL with the new Web App URL you get after deploying the new `Code.gs` script.
-const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxxRTMd3Lls97b4_XJf1fOoaSF8_J4V_VwCpMuaVUQ2PiHpxNIk96YVTs1Idv1hPk7D/exec';
+// =====================================================================================
+// !! IMPORTANT !!
+// The app will guide you through this process on the main screen.
+// 1. Follow the on-screen instructions to deploy the `scripts/Code.gs.js` file.
+// 2. Copy the final Web App URL from the deployment window.
+// 3. Paste it here, replacing the placeholder text.
+// =====================================================================================
+const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnAI4QP_xUarQdiCdrB7d4f5KXvu5mw8bMycxM1nXazotKB8X_tZvsmeTGivGjqljR/exec';
+const isUrlPlaceholder = APP_SCRIPT_URL.includes('REPLACE_WITH_YOUR_NEW_WEB_APP_URL');
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(Page.LANDING);
@@ -36,16 +44,19 @@ const App: React.FC = () => {
   const [newGallonPrice, setNewGallonPrice] = useState<number>(0);
 
   useEffect(() => {
+    // If the URL is still the placeholder, don't attempt to fetch.
+    // The main component render will show the SetupGuide.
+    if (isUrlPlaceholder) {
+        setIsLoading(false);
+        return;
+    }
+
     const fetchDataFromSheet = async () => {
         setIsLoading(true);
         setFetchError(null);
         try {
-            if (APP_SCRIPT_URL.includes('REPLACE_WITH_YOUR_NEW_WEB_APP_URL')) {
-                throw new Error("The `APP_SCRIPT_URL` is a placeholder. Please deploy the `Code.gs` script and paste the new Web App URL into `App.tsx`.");
-            }
-            
             const cacheBuster = `_=${new Date().getTime()}`;
-            const response = await fetch(`${APP_SCRIPT_URL}?action=getAllData&${cacheBuster}`);
+            const response = await fetch(`${APP_SCRIPT_URL}?${cacheBuster}`);
             
             if (!response.ok) {
                 let errorText = await response.text();
@@ -356,6 +367,11 @@ const App: React.FC = () => {
       default: return <LandingPage navigateTo={navigateTo} />;
     }
   };
+  
+  // If the URL is a placeholder, show the setup guide.
+  if (isUrlPlaceholder) {
+    return <SetupGuide />;
+  }
   
   if (fetchError) {
     return (
