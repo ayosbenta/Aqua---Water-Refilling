@@ -18,6 +18,24 @@ const statusConfig: { [key in BookingStatus]: { color: string; icon: React.FC<Re
     Cancelled: { color: 'bg-red-100 text-red-800', icon: XCircleIcon },
 };
 
+const formatTimeSlot = (timeSlot: string): string => {
+  try {
+    const date = new Date(timeSlot);
+    // This check handles cases where Google Sheets automatically converts a time
+    // (like "8:00am") into a full date-time string with a default date.
+    if (!isNaN(date.getTime()) && timeSlot.includes('T')) {
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }).replace(' ', '').toLowerCase();
+    }
+  } catch (error) {
+    // Fallback for non-date strings
+  }
+  return timeSlot; // Return original string for formats like "9am-12pm"
+};
+
 const BookingCard: React.FC<BookingCardProps> = ({ booking, isAdminView = false, onStatusChange }) => {
   const { icon: StatusIcon, color } = statusConfig[booking.status];
 
@@ -73,7 +91,7 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, isAdminView = false,
             </div>
             <div className="flex items-center gap-3">
               <ClockIcon className="h-5 w-5 text-gray-400" />
-              <span>{booking.timeSlot}</span>
+              <span>{formatTimeSlot(booking.timeSlot)}</span>
             </div>
              <div className="flex items-center gap-3">
               <CurrencyDollarIcon className="h-5 w-5 text-gray-400" />
