@@ -311,16 +311,12 @@ const App: React.FC = () => {
 
   const addBooking = async (newBooking: Omit<Booking, 'id' | 'status' | 'userId'>) => {
     if (!currentUser) return;
-    
-    const selectedGallonType = gallonTypes.find(gt => gt.name === newBooking.gallonType);
-    const refillPrice = selectedGallonType ? selectedGallonType.price : 0;
 
     const booking: Booking = {
       id: `B${Date.now().toString(36)}`,
       ...newBooking,
       userId: currentUser.id,
       status: 'Pending',
-      price: (newBooking.gallonCount * refillPrice) + ((newBooking.newGallonPurchaseCount || 0) * newGallonPrice),
     };
      const success = await sendDataToSheet(booking, 'booking');
      if (success) {

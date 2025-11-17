@@ -14,7 +14,7 @@ const SETTINGS_SHEET_NAME = "Settings";
 
 // --- DEFAULT HEADERS (for auto-initialization of empty sheets) ---
 const USER_HEADERS = ['id', 'fullName', 'mobile', 'email', 'password', 'type'];
-const BOOKING_HEADERS = ['id', 'userId', 'gallonCount', 'newGallonPurchaseCount', 'gallonType', 'pickupAddress', 'pickupDate', 'timeSlot', 'notes', 'status', 'deliveryOption', 'createdAt', 'completedAt', 'price', 'paymentMethod'];
+const BOOKING_HEADERS = ['id', 'userId', 'gallonCount', 'newGallonPurchaseCount', 'gallonType', 'pickupAddress', 'pickupDate', 'timeSlot', 'notes', 'status', 'deliveryOption', 'createdAt', 'completedAt', 'price', 'paymentMethod', 'items'];
 const SETTINGS_HEADERS = ['key', 'value'];
 
 

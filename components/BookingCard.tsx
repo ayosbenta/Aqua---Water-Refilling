@@ -1,5 +1,5 @@
 import React from 'react';
-import { Booking, BookingStatus } from '../types';
+import { Booking, BookingStatus, BookingItem } from '../types';
 import { CalendarIcon, ClockIcon, LocationMarkerIcon, TagIcon, WaterDropIcon, CheckCircleIcon, XCircleIcon, TruckIcon, CurrencyDollarIcon, CreditCardIcon } from './Icons';
 
 interface BookingCardProps {
@@ -21,8 +21,6 @@ const statusConfig: { [key in BookingStatus]: { color: string; icon: React.FC<Re
 const formatTimeSlot = (timeSlot: string): string => {
   try {
     const date = new Date(timeSlot);
-    // This check handles cases where Google Sheets automatically converts a time
-    // (like "8:00am") into a full date-time string with a default date.
     if (!isNaN(date.getTime()) && timeSlot.includes('T')) {
       return date.toLocaleTimeString('en-US', {
         hour: 'numeric',
@@ -43,6 +41,44 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, isAdminView = false,
     if (onStatusChange) {
       onStatusChange(booking.id, status);
     }
+  };
+  
+  const renderBookingItems = () => {
+    if (booking.items) {
+      try {
+        const items: BookingItem[] = JSON.parse(booking.items);
+        if (items.length > 0) {
+          return (
+            <div className="space-y-1">
+              {items.map((item, index) => (
+                <React.Fragment key={index}>
+                  {item.refill > 0 && (
+                    <p className="text-xl font-bold text-gray-800">{item.refill} x {item.name || 'Unknown Item'} (Refill)</p>
+                  )}
+                  {item.new > 0 && (
+                    <p className="text-xl font-bold text-gray-700">{item.new} x {item.name || 'Unknown Item'} (New)</p>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          );
+        }
+        return null; // If items array is empty, render nothing.
+      } catch (e) {
+        console.error("Failed to parse booking items", e);
+        return <p className="text-sm text-red-500">Could not display order items.</p>;
+      }
+    }
+    
+    // Fallback for old data structure
+    return (
+       <div>
+        <p className="text-2xl font-bold text-gray-800 mt-1">{booking.gallonCount} x {booking.gallonType} (Refill)</p>
+        {booking.newGallonPurchaseCount && booking.newGallonPurchaseCount > 0 && (
+             <p className="text-xl font-bold text-gray-700 mt-1">{booking.newGallonPurchaseCount} x New Gallon(s)</p>
+        )}
+       </div>
+    );
   };
 
   const AdminActions: React.FC = () => {
@@ -68,12 +104,11 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, isAdminView = false,
         <div className="flex justify-between items-start">
           <div>
             <p className="text-sm font-medium text-primary-dark">Booking ID: {booking.id}</p>
-            <p className="text-2xl font-bold text-gray-800 mt-1">{booking.gallonCount} x {booking.gallonType} (Refill)</p>
-            {booking.newGallonPurchaseCount && booking.newGallonPurchaseCount > 0 && (
-                 <p className="text-xl font-bold text-gray-700 mt-1">{booking.newGallonPurchaseCount} x New Gallon(s)</p>
-            )}
+            <div className="mt-2">
+                {renderBookingItems()}
+            </div>
           </div>
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${color}`}>
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${color} mt-1`}>
             <StatusIcon className="h-4 w-4" />
             {booking.status}
           </div>

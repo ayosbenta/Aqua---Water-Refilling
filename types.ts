@@ -34,12 +34,15 @@ export type TimeSlot = string;
 export type BookingStatus = 'Pending' | 'Accepted' | 'Picked Up' | 'Refilled' | 'Out for Delivery' | 'Completed' | 'Cancelled';
 export type PaymentMethod = 'Cash on Delivery' | 'Cash' | 'GCash';
 
+export interface BookingItem {
+  name: string;
+  refill: number;
+  new: number;
+}
+
 export interface Booking {
   id: string;
   userId: string;
-  gallonCount: number;
-  newGallonPurchaseCount?: number;
-  gallonType: string;
   pickupAddress: string;
   pickupDate: string;
   timeSlot: TimeSlot;
@@ -50,6 +53,12 @@ export interface Booking {
   completedAt?: Date;
   price?: number;
   paymentMethod: PaymentMethod;
+  items?: string; // JSON string of BookingItem[]
+
+  // For backward compatibility with old data
+  gallonCount?: number;
+  newGallonPurchaseCount?: number;
+  gallonType?: string;
 }
 
 export interface Rider {

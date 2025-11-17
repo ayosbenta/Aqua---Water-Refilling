@@ -1,6 +1,5 @@
-
 import React, { useMemo, useState } from 'react';
-import { Booking, User, BookingStatus } from '../types';
+import { Booking, User, BookingStatus, BookingItem } from '../types';
 import { ClipboardListIcon, CheckCircleIcon, ClockIcon, CurrencyDollarIcon, WaterDropIcon, TagIcon } from './Icons';
 import Pagination from './Pagination';
 
@@ -31,6 +30,19 @@ const statusBadge: { [key in BookingStatus]: string } = {
     Cancelled: 'bg-red-100 text-red-800',
 };
 
+const getTotalGallons = (booking: Booking): number => {
+    if (booking.items) {
+        try {
+            const items: BookingItem[] = JSON.parse(booking.items);
+            return items.reduce((sum, item) => sum + (item.refill || 0) + (item.new || 0), 0);
+        } catch {
+            return 0; // Don't use fallback if items field exists but is invalid
+        }
+    }
+    return (booking.gallonCount || 0) + (booking.newGallonPurchaseCount || 0);
+};
+
+
 const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ bookings, users }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -38,8 +50,28 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ bookings, users }
   const stats = useMemo(() => {
     const completedBookings = bookings.filter(b => b.status === 'Completed');
     const totalRevenue = completedBookings.reduce((sum, b) => sum + (b.price || 0), 0);
-    const totalRefills = completedBookings.reduce((sum, b) => sum + b.gallonCount, 0);
-    const totalNewGallons = completedBookings.reduce((sum, b) => sum + (b.newGallonPurchaseCount || 0), 0);
+    
+    let totalRefills = 0;
+    let totalNewGallons = 0;
+
+    completedBookings.forEach(b => {
+      if (b.items) {
+        try {
+          const items: BookingItem[] = JSON.parse(b.items);
+          items.forEach(item => {
+            totalRefills += item.refill || 0;
+            totalNewGallons += item.new || 0;
+          });
+        } catch (e) {
+            // If items field exists but is invalid, do not use fallback.
+            // Skip this booking's gallon counts to avoid data corruption.
+        }
+      } else {
+        // Fallback for old data
+        totalRefills += b.gallonCount || 0;
+        totalNewGallons += b.newGallonPurchaseCount || 0;
+      }
+    });
     
     return {
       totalBookings: bookings.length,
@@ -81,7 +113,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ bookings, users }
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gallons</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Gallons</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 </tr>
@@ -92,7 +124,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ bookings, users }
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{booking.id}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{usersMap.get(booking.userId) || 'Unknown User'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(booking.createdAt).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.gallonCount}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getTotalGallons(booking)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{(booking.price || 0).toLocaleString('en-US', { style: 'currency', currency: 'PHP' })}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusBadge[booking.status]}`}>
