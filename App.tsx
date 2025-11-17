@@ -43,6 +43,39 @@ const App: React.FC = () => {
   const [gallonPrice, setGallonPrice] = useState<number>(0);
   const [newGallonPrice, setNewGallonPrice] = useState<number>(0);
 
+  const navigateTo = useCallback((page: Page) => {
+    setCurrentPage(page);
+  }, []);
+
+  // Session persistence on page load
+  useEffect(() => {
+    const savedUserJson = localStorage.getItem('currentUser');
+    if (savedUserJson) {
+        try {
+            const user: User = JSON.parse(savedUserJson);
+            setCurrentUser(user);
+            // Navigate to the correct dashboard, bypassing the landing page
+            switch(user.type) {
+                case UserType.ADMIN:
+                    navigateTo(Page.ADMIN_DASHBOARD);
+                    break;
+                case UserType.RIDER:
+                    navigateTo(Page.RIDER_DASHBOARD);
+                    break;
+                case UserType.CUSTOMER:
+                    navigateTo(Page.USER_DASHBOARD);
+                    break;
+                default:
+                    navigateTo(Page.LANDING);
+            }
+        } catch (error) {
+            console.error("Failed to parse user from localStorage", error);
+            localStorage.removeItem('currentUser'); // Clear corrupted data
+        }
+    }
+  }, [navigateTo]);
+
+
   const fetchDataFromSheet = useCallback(async (isPolling: boolean = false) => {
     if (!isPolling) {
         setIsLoading(true);
@@ -156,9 +189,6 @@ const App: React.FC = () => {
     }
   }, [currentUser, fetchDataFromSheet]);
 
-  const navigateTo = useCallback((page: Page) => {
-    setCurrentPage(page);
-  }, []);
   
   const sendDataToSheet = async (payload: any, dataType: 'booking' | 'user' | 'settings'): Promise<boolean> => {
     try {
@@ -218,6 +248,7 @@ const App: React.FC = () => {
             type: UserType.ADMIN,
         };
         setCurrentUser(adminUser);
+        localStorage.setItem('currentUser', JSON.stringify(adminUser));
         navigateTo(Page.ADMIN_DASHBOARD);
         return true;
     }
@@ -228,6 +259,7 @@ const App: React.FC = () => {
 
     if (foundUser && foundUser.password === trimmedPassword) {
         setCurrentUser(foundUser);
+        localStorage.setItem('currentUser', JSON.stringify(foundUser));
         if (foundUser.type === UserType.RIDER) navigateTo(Page.RIDER_DASHBOARD);
         else navigateTo(Page.USER_DASHBOARD);
         return true;
@@ -277,6 +309,7 @@ const App: React.FC = () => {
 
   const handleLogout = useCallback(() => {
     setCurrentUser(null);
+    localStorage.removeItem('currentUser');
     navigateTo(Page.LANDING);
   }, [navigateTo]);
 
@@ -427,7 +460,8 @@ const App: React.FC = () => {
     );
   }
 
-  if (isLoading) {
+  // Show a loading screen only on the initial load, not when restoring a session
+  if (isLoading && !currentUser) {
     return (
         <div className="flex justify-center items-center min-h-screen bg-secondary">
             <div className="text-center">
