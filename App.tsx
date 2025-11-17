@@ -13,13 +13,14 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import Header from './components/Header';
 
-// The URL for the Google Apps Script Web App
+// IMPORTANT: Replace this URL with the new Web App URL you get after deploying the new `Code.gs` script.
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxxRTMd3Lls97b4_XJf1fOoaSF8_J4V_VwCpMuaVUQ2PiHpxNIk96YVTs1Idv1hPk7D/exec';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(Page.LANDING);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // --- State is now managed by fetching from Google Sheets ---
   const [users, setUsers] = useState<User[]>([]);
@@ -37,18 +38,32 @@ const App: React.FC = () => {
   useEffect(() => {
     const fetchDataFromSheet = async () => {
         setIsLoading(true);
+        setFetchError(null);
         try {
+            if (APP_SCRIPT_URL.includes('REPLACE_WITH_YOUR_NEW_WEB_APP_URL')) {
+                throw new Error("The `APP_SCRIPT_URL` is a placeholder. Please deploy the `Code.gs` script and paste the new Web App URL into `App.tsx`.");
+            }
+            
             const cacheBuster = `_=${new Date().getTime()}`;
             const response = await fetch(`${APP_SCRIPT_URL}?action=getAllData&${cacheBuster}`);
+            
             if (!response.ok) {
-                throw new Error(`Network response was not ok: ${response.statusText}`);
+                let errorText = await response.text();
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorText = errorJson.message || errorText;
+                } catch(e) { /* Not a JSON error, use text */ }
+                throw new Error(`Network response was not ok: ${response.statusText} - ${errorText}`);
             }
             const data = await response.json();
+
+            if (data.status === 'error') {
+                throw new Error(`Apps Script Error: ${data.message}`);
+            }
             
             if (data.users && Array.isArray(data.users)) {
                  const normalizedUsers = data.users.map((user: any) => ({
                     ...user,
-                    // Spreadsheets can return numbers for mobile numbers; ensure it's a string for consistent comparison.
                     mobile: user.mobile ? String(user.mobile).trim() : '',
                     fullName: user.fullName ? String(user.fullName).trim() : '',
                     email: user.email ? String(user.email).trim() : '',
@@ -83,8 +98,14 @@ const App: React.FC = () => {
                  setNewGallonPrice(150);
             }
 
-        } catch (error) {
-            console.error("Failed to fetch data from Google Sheets. Using empty data and default settings.", error);
+        } catch (error: any) {
+            console.error("Failed to fetch data from Google Sheets.", error);
+            let detailedError = error.message;
+            if (error.message.includes("Failed to fetch")) {
+                detailedError += " This could be a CORS issue. Please ensure your Google Apps Script is deployed with 'Who has access' set to 'Anyone'. Also, check the browser console for more details.";
+            }
+            setFetchError(`Failed to connect to the database. ${detailedError}`);
+            // Set default empty state
             setUsers([]);
             setBookings([]);
             setGallonTypes(['Slim', 'Round', '5G']);
@@ -97,7 +118,7 @@ const App: React.FC = () => {
     };
 
     fetchDataFromSheet();
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []);
 
   const navigateTo = useCallback((page: Page) => {
     setCurrentPage(page);
@@ -107,22 +128,26 @@ const App: React.FC = () => {
     try {
       const response = await fetch(APP_SCRIPT_URL, {
         method: 'POST',
-        // Using text/plain avoids a CORS preflight request which can be problematic with Google Apps Script.
-        // The Apps Script must be configured to parse the JSON string from the request body.
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ dataType, payload }),
+        redirect: 'follow',
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Request failed with status ${response.status}. Body: ${errorText}`);
       }
+      
+      const result = await response.json();
+      if(result.status === 'error') {
+        throw new Error(`Apps Script POST Error: ${result.message}`);
+      }
 
-      console.log(`${dataType} data sent to Google Sheets.`);
-      return true; // Indicate success
+      console.log(`${dataType} data sent to Google Sheets: ${result.message}`);
+      return true;
     } catch (error) {
       console.error(`Failed to send ${dataType} data to Google Sheets:`, error);
-      return false; // Indicate failure
+      return false;
     }
   };
 
@@ -132,16 +157,13 @@ const App: React.FC = () => {
       id: `U${Date.now().toString(36)}`,
     };
 
-    // First, try to save the user to the single source of truth (Google Sheets)
     const success = await sendDataToSheet(user, 'user');
 
     if (success) {
-      // If saving was successful, update the local state and proceed
       setUsers(prev => [...prev, user]);
       alert('Registration successful! Please log in.');
       navigateTo(Page.LOGIN);
     } else {
-      // If saving failed, inform the user
       alert('Registration failed. Could not save your information. Please try again.');
     }
   };
@@ -150,7 +172,6 @@ const App: React.FC = () => {
     const normalizedInput = usernameOrEmail.toLowerCase().trim();
     const trimmedPassword = password.trim();
     
-    // Special case for hardcoded admin login
     if (normalizedInput === 'admin' && trimmedPassword === 'admin') {
         const adminUser: User = {
             id: 'admin-user',
@@ -165,7 +186,6 @@ const App: React.FC = () => {
         return true;
     }
 
-    // Logic for regular users from Google Sheets
     const foundUser = users.find(user =>
         user.email?.toLowerCase() === normalizedInput || user.mobile === normalizedInput
     );
@@ -201,15 +221,19 @@ const App: React.FC = () => {
           password: newPassword,
         };
         
-        const updatedUsers = [...users];
-        updatedUsers[userIndex] = updatedUser;
-        setUsers(updatedUsers);
-        sendDataToSheet(updatedUser, 'user');
-        
-        alert("Password has been reset successfully. Please log in with your new password.");
-        setPasswordResetState({ email: null, code: null });
-        navigateTo(Page.LOGIN);
-        return true;
+        const success = await sendDataToSheet(updatedUser, 'user');
+        if (success) {
+            const updatedUsers = [...users];
+            updatedUsers[userIndex] = updatedUser;
+            setUsers(updatedUsers);
+            
+            alert("Password has been reset successfully. Please log in with your new password.");
+            setPasswordResetState({ email: null, code: null });
+            navigateTo(Page.LOGIN);
+            return true;
+        } else {
+            alert("Failed to update password. Please try again.");
+        }
       }
     }
     return false;
@@ -238,7 +262,7 @@ const App: React.FC = () => {
      }
   };
   
-  const updateBookingStatus = (bookingId: string, status: Booking['status']) => {
+  const updateBookingStatus = async (bookingId: string, status: Booking['status']) => {
     const bookingToUpdate = bookings.find(b => b.id === bookingId);
     if (!bookingToUpdate) return;
     
@@ -248,60 +272,75 @@ const App: React.FC = () => {
       ...(status === 'Completed' && { completedAt: new Date() })
     };
     
-    setBookings(prev => prev.map(b => (b.id === bookingId ? updatedBooking : b)));
-    sendDataToSheet(updatedBooking, 'booking');
+    const success = await sendDataToSheet(updatedBooking, 'booking');
+    if (success) {
+        setBookings(prev => prev.map(b => (b.id === bookingId ? updatedBooking : b)));
+    } else {
+        alert(`Failed to update booking status for ${bookingId}. Please try again.`);
+    }
   };
 
-  const updateUserType = (userId: string, type: UserType) => {
+  const updateUserType = async (userId: string, type: UserType) => {
     const userIndex = users.findIndex(u => u.id === userId);
     if (userIndex === -1) return;
 
     const updatedUser = { ...users[userIndex], type };
-    const updatedUsers = [...users];
-    updatedUsers[userIndex] = updatedUser;
+    
+    const success = await sendDataToSheet(updatedUser, 'user');
+    if(success) {
+        const updatedUsers = [...users];
+        updatedUsers[userIndex] = updatedUser;
+        setUsers(updatedUsers);
+    } else {
+        alert(`Failed to update user type for ${updatedUser.fullName}. Please try again.`);
+    }
+  };
 
-    setUsers(updatedUsers);
-    sendDataToSheet(updatedUser, 'user');
+  const saveSettings = async (settings: any) => {
+    const success = await sendDataToSheet(settings, 'settings');
+    if (!success) {
+        alert("Failed to save settings. Please try again.");
+    }
   };
 
   const addGallonType = (type: GallonType) => {
     if (type && !gallonTypes.includes(type)) {
       const newGallonTypes = [...gallonTypes, type];
       setGallonTypes(newGallonTypes);
-      sendDataToSheet({ gallonTypes: newGallonTypes, timeSlots, gallonPrice, newGallonPrice }, 'settings');
+      saveSettings({ gallonTypes: newGallonTypes, timeSlots, gallonPrice, newGallonPrice });
     }
   };
   const removeGallonType = (type: GallonType) => {
       const newGallonTypes = gallonTypes.filter(t => t !== type);
       setGallonTypes(newGallonTypes);
-      sendDataToSheet({ gallonTypes: newGallonTypes, timeSlots, gallonPrice, newGallonPrice }, 'settings');
+      saveSettings({ gallonTypes: newGallonTypes, timeSlots, gallonPrice, newGallonPrice });
   };
   const addTimeSlot = (slot: TimeSlot) => {
       if (slot && !timeSlots.includes(slot)) {
           const newTimeSlots = [...timeSlots, slot];
           setTimeSlots(newTimeSlots);
-          sendDataToSheet({ gallonTypes, timeSlots: newTimeSlots, gallonPrice, newGallonPrice }, 'settings');
+          saveSettings({ gallonTypes, timeSlots: newTimeSlots, gallonPrice, newGallonPrice });
       }
   };
   const removeTimeSlot = (slot: TimeSlot) => {
       const newTimeSlots = timeSlots.filter(s => s !== slot);
       setTimeSlots(newTimeSlots);
-      sendDataToSheet({ gallonTypes, timeSlots: newTimeSlots, gallonPrice, newGallonPrice }, 'settings');
+      saveSettings({ gallonTypes, timeSlots: newTimeSlots, gallonPrice, newGallonPrice });
   };
   const updateGallonPrice = (newPrice: number) => {
       if (newPrice >= 0) {
           setGallonPrice(newPrice);
-          sendDataToSheet({ gallonTypes, timeSlots, gallonPrice: newPrice, newGallonPrice }, 'settings');
+          saveSettings({ gallonTypes, timeSlots, gallonPrice: newPrice, newGallonPrice });
       }
   };
   const updateNewGallonPrice = (newPrice: number) => {
       if (newPrice >= 0) {
           setNewGallonPrice(newPrice);
-          sendDataToSheet({ gallonTypes, timeSlots, gallonPrice, newGallonPrice: newPrice }, 'settings');
+          saveSettings({ gallonTypes, timeSlots, gallonPrice, newGallonPrice: newPrice });
       }
   };
 
-  const userBookings = useMemo(() => currentUser ? bookings.filter(b => b.userId === currentUser.id) : [], [currentUser, bookings]);
+  const userBookings = useMemo(() => currentUser ? bookings.filter(b => b.userId === currentUser.id).sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()) : [], [currentUser, bookings]);
 
   const renderPage = () => {
     switch (currentPage) {
@@ -317,6 +356,35 @@ const App: React.FC = () => {
       default: return <LandingPage navigateTo={navigateTo} />;
     }
   };
+  
+  if (fetchError) {
+    return (
+        <div className="flex justify-center items-center min-h-screen bg-red-50">
+            <div className="text-center p-8 bg-white shadow-lg rounded-lg max-w-2xl mx-4">
+                <svg className="mx-auto h-12 w-12 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                <h2 className="mt-6 text-2xl font-semibold text-red-700">Failed to Connect to Google Sheets</h2>
+                <p className="mt-2 text-gray-600">The application could not retrieve data from the backend. This is usually due to a configuration issue.</p>
+                <div className="mt-4 text-sm text-left text-gray-500 bg-red-50 border border-red-200 p-3 rounded">
+                    <p className="font-semibold text-red-600">Error details:</p>
+                    <p>{fetchError}</p>
+                </div>
+
+                <div className="mt-6 text-left space-y-3">
+                    <h3 className="font-semibold text-gray-800">Please check the following:</h3>
+                    <ol className="list-decimal list-inside text-gray-600 space-y-2">
+                        <li>In the <strong>`Code.gs`</strong> file, make sure the spreadsheet ID and sheet names are correct.</li>
+                        <li>You must deploy the `Code.gs` script as a <strong>"Web app"</strong>.</li>
+                        <li>In the deployment settings, "Who has access" must be set to <strong>"Anyone"</strong>.</li>
+                        <li>In the <strong>`App.tsx`</strong> file, the <strong>`APP_SCRIPT_URL`</strong> constant must be replaced with your unique URL from deploying the Google Apps Script.</li>
+                    </ol>
+                </div>
+                 <p className="mt-6 text-xs text-gray-400">After fixing the configuration, please refresh the page.</p>
+            </div>
+        </div>
+    );
+  }
 
   if (isLoading) {
     return (
