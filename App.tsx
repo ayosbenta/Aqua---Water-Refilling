@@ -43,93 +43,118 @@ const App: React.FC = () => {
   const [gallonPrice, setGallonPrice] = useState<number>(0);
   const [newGallonPrice, setNewGallonPrice] = useState<number>(0);
 
+  const fetchDataFromSheet = useCallback(async (isPolling: boolean = false) => {
+    if (!isPolling) {
+        setIsLoading(true);
+        setFetchError(null);
+    }
+    try {
+        const cacheBuster = `_=${new Date().getTime()}`;
+        const response = await fetch(`${APP_SCRIPT_URL}?${cacheBuster}`);
+        
+        if (!response.ok) {
+            let errorText = await response.text();
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorText = errorJson.message || errorText;
+            } catch(e) { /* Not a JSON error, use text */ }
+            throw new Error(`Network response was not ok: ${response.statusText} - ${errorText}`);
+        }
+        const data = await response.json();
+
+        if (data.status === 'error') {
+            throw new Error(`Apps Script Error: ${data.message}`);
+        }
+        
+        if (data.users && Array.isArray(data.users)) {
+             const normalizedUsers = data.users.map((user: any) => ({
+                ...user,
+                mobile: user.mobile ? String(user.mobile).trim() : '',
+                fullName: user.fullName ? String(user.fullName).trim() : '',
+                email: user.email ? String(user.email).trim() : '',
+                password: user.password ? String(user.password).trim() : '',
+            }));
+            setUsers(normalizedUsers);
+        } else {
+            setUsers([]);
+        }
+
+        if (data.bookings && Array.isArray(data.bookings)) {
+             const formattedBookings = data.bookings.map((b: any) => ({
+                ...b,
+                createdAt: new Date(b.createdAt),
+                completedAt: b.completedAt ? new Date(b.completedAt) : undefined,
+            }));
+            setBookings(formattedBookings);
+        } else {
+            setBookings([]);
+        }
+        
+        if (data.settings) {
+            setGallonTypes(data.settings.gallonTypes || []);
+            setTimeSlots(data.settings.timeSlots || []);
+            setGallonPrice(data.settings.gallonPrice || 25);
+            setNewGallonPrice(data.settings.newGallonPrice || 150);
+        } else {
+             console.warn("No 'settings' object in fetched data, using default settings.");
+             setGallonTypes(['Slim', 'Round', '5G']);
+             setTimeSlots(['9am–12pm', '1pm–5pm']);
+             setGallonPrice(25);
+             setNewGallonPrice(150);
+        }
+
+    } catch (error: any) {
+        console.error("Failed to fetch data from Google Sheets.", error);
+        if (isPolling) {
+            console.warn("Polling for new data failed. The app will continue with existing data.");
+            return;
+        }
+
+        let detailedError = error.message;
+        if (error.message.includes("Failed to fetch")) {
+            detailedError += " This could be a CORS issue. Please ensure your Google Apps Script is deployed with 'Who has access' set to 'Anyone'. Also, check the browser console for more details.";
+        }
+        setFetchError(`Failed to connect to the database. ${detailedError}`);
+        // Set default empty state
+        setUsers([]);
+        setBookings([]);
+        setGallonTypes(['Slim', 'Round', '5G']);
+        setTimeSlots(['9am–12pm', '1pm–5pm']);
+        setGallonPrice(25);
+        setNewGallonPrice(150);
+    } finally {
+        if (!isPolling) {
+            setIsLoading(false);
+        }
+    }
+  }, []);
+
+  // Initial data fetch
   useEffect(() => {
-    // If the URL is still the placeholder, don't attempt to fetch.
-    // The main component render will show the SetupGuide.
     if (isUrlPlaceholder) {
         setIsLoading(false);
         return;
     }
+    fetchDataFromSheet(false);
+  }, [isUrlPlaceholder, fetchDataFromSheet]);
+  
+  // Real-time polling for Admin and Rider dashboards
+  useEffect(() => {
+    if (currentUser && (currentUser.type === UserType.ADMIN || currentUser.type === UserType.RIDER)) {
+      const pollInterval = 10000; // 10 seconds
+      console.log(`Starting real-time updates for ${currentUser.type} with a ${pollInterval / 1000}s interval.`);
+      
+      const intervalId = setInterval(() => {
+        fetchDataFromSheet(true);
+      }, pollInterval);
 
-    const fetchDataFromSheet = async () => {
-        setIsLoading(true);
-        setFetchError(null);
-        try {
-            const cacheBuster = `_=${new Date().getTime()}`;
-            const response = await fetch(`${APP_SCRIPT_URL}?${cacheBuster}`);
-            
-            if (!response.ok) {
-                let errorText = await response.text();
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    errorText = errorJson.message || errorText;
-                } catch(e) { /* Not a JSON error, use text */ }
-                throw new Error(`Network response was not ok: ${response.statusText} - ${errorText}`);
-            }
-            const data = await response.json();
-
-            if (data.status === 'error') {
-                throw new Error(`Apps Script Error: ${data.message}`);
-            }
-            
-            if (data.users && Array.isArray(data.users)) {
-                 const normalizedUsers = data.users.map((user: any) => ({
-                    ...user,
-                    mobile: user.mobile ? String(user.mobile).trim() : '',
-                    fullName: user.fullName ? String(user.fullName).trim() : '',
-                    email: user.email ? String(user.email).trim() : '',
-                    password: user.password ? String(user.password).trim() : '',
-                }));
-                setUsers(normalizedUsers);
-            } else {
-                setUsers([]);
-            }
-
-            if (data.bookings && Array.isArray(data.bookings)) {
-                 const formattedBookings = data.bookings.map((b: any) => ({
-                    ...b,
-                    createdAt: new Date(b.createdAt),
-                    completedAt: b.completedAt ? new Date(b.completedAt) : undefined,
-                }));
-                setBookings(formattedBookings);
-            } else {
-                setBookings([]);
-            }
-            
-            if (data.settings) {
-                setGallonTypes(data.settings.gallonTypes || []);
-                setTimeSlots(data.settings.timeSlots || []);
-                setGallonPrice(data.settings.gallonPrice || 25);
-                setNewGallonPrice(data.settings.newGallonPrice || 150);
-            } else {
-                 console.warn("No 'settings' object in fetched data, using default settings.");
-                 setGallonTypes(['Slim', 'Round', '5G']);
-                 setTimeSlots(['9am–12pm', '1pm–5pm']);
-                 setGallonPrice(25);
-                 setNewGallonPrice(150);
-            }
-
-        } catch (error: any) {
-            console.error("Failed to fetch data from Google Sheets.", error);
-            let detailedError = error.message;
-            if (error.message.includes("Failed to fetch")) {
-                detailedError += " This could be a CORS issue. Please ensure your Google Apps Script is deployed with 'Who has access' set to 'Anyone'. Also, check the browser console for more details.";
-            }
-            setFetchError(`Failed to connect to the database. ${detailedError}`);
-            // Set default empty state
-            setUsers([]);
-            setBookings([]);
-            setGallonTypes(['Slim', 'Round', '5G']);
-            setTimeSlots(['9am–12pm', '1pm–5pm']);
-            setGallonPrice(25);
-            setNewGallonPrice(150);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    fetchDataFromSheet();
-  }, []);
+      // Cleanup function to stop polling when the component unmounts or the user logs out.
+      return () => {
+        console.log("Stopping real-time updates.");
+        clearInterval(intervalId);
+      };
+    }
+  }, [currentUser, fetchDataFromSheet]);
 
   const navigateTo = useCallback((page: Page) => {
     setCurrentPage(page);
