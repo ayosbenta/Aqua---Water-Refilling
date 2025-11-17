@@ -54,8 +54,12 @@ const CreateBookingPage: React.FC<CreateBookingPageProps> = ({ addBooking, navig
         cart.forEach(item => {
             const gallonType = gallonTypes.find(g => g.name === item.name);
             if (gallonType) {
+                // Regular refills are charged at their standard price.
                 const refillCost = item.refill * gallonType.price;
-                const newCost = item.new * (gallonType.price + newGallonPrice);
+
+                // The cost of a new gallon is for the container only. The initial water is free.
+                const newCost = item.new * newGallonPrice;
+                
                 amount += refillCost + newCost;
                 itemsCount += item.refill + item.new;
             }
