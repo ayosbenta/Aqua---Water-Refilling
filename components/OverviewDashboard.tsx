@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { Booking, User, BookingStatus } from '../types';
 import { ClipboardListIcon, CheckCircleIcon, ClockIcon, CurrencyDollarIcon, WaterDropIcon, TagIcon } from './Icons';
@@ -62,7 +63,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ bookings, users }
 
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <StatCard title="Total Bookings" value={stats.totalBookings} icon={<ClipboardListIcon className="h-6 w-6 text-blue-600" />} color="bg-blue-100" />
         <StatCard title="Completed Orders" value={stats.completed} icon={<CheckCircleIcon className="h-6 w-6 text-green-600" />} color="bg-green-100" />
         <StatCard title="Pending Requests" value={stats.pending} icon={<ClockIcon className="h-6 w-6 text-yellow-600" />} color="bg-yellow-100" />

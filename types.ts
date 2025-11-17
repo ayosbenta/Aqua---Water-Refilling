@@ -26,7 +26,10 @@ export interface User {
   type: UserType;
 }
 
-export type GallonType = string;
+export interface GallonType {
+  name: string;
+  price: number;
+}
 export type TimeSlot = string;
 export type BookingStatus = 'Pending' | 'Accepted' | 'Picked Up' | 'Refilled' | 'Out for Delivery' | 'Completed' | 'Cancelled';
 export type PaymentMethod = 'Cash on Delivery' | 'Cash' | 'GCash';
@@ -36,7 +39,7 @@ export interface Booking {
   userId: string;
   gallonCount: number;
   newGallonPurchaseCount?: number;
-  gallonType: GallonType;
+  gallonType: string;
   pickupAddress: string;
   pickupDate: string;
   timeSlot: TimeSlot;

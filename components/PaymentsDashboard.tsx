@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Booking, User, PaymentMethod } from '../types';
 import Pagination from './Pagination';
@@ -116,12 +117,12 @@ const PaymentsDashboard: React.FC<PaymentsDashboardProps> = ({ allBookings, user
 
   return (
     <div className="space-y-8">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div className="flex items-center gap-3">
                 <BanknotesIcon className="h-8 w-8 text-primary-dark" />
-                <h2 className="text-2xl font-bold text-gray-800">Payments Overview</h2>
+                <h2 className="text-2xl font-bold text-gray-800 whitespace-nowrap">Payments Overview</h2>
             </div>
-            <div className="bg-gray-100 p-1 rounded-lg flex items-center gap-1 max-w-xs w-full">
+            <div className="bg-gray-100 p-1 rounded-lg flex items-center gap-1 w-full sm:max-w-xs">
                 <TimeFilterButton label="Today" />
                 <TimeFilterButton label="Weekly" />
                 <TimeFilterButton label="Monthly" />
@@ -142,11 +143,11 @@ const PaymentsDashboard: React.FC<PaymentsDashboardProps> = ({ allBookings, user
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
                 <h3 className="text-xl font-semibold text-gray-800">
                     {paymentFilter === 'All' ? 'All' : paymentFilter} Transactions ({tableBookings.length})
                 </h3>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
                     <PaymentFilterButton label="All" />
                     {PAYMENT_METHODS.map(method => <PaymentFilterButton key={method} label={method} />)}
                 </div>

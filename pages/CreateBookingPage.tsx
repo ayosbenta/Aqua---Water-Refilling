@@ -6,14 +6,13 @@ interface CreateBookingPageProps {
     navigateTo: (page: Page) => void;
     gallonTypes: GallonType[];
     timeSlots: TimeSlot[];
-    gallonPrice: number;
     newGallonPrice: number;
 }
 
-const CreateBookingPage: React.FC<CreateBookingPageProps> = ({ addBooking, navigateTo, gallonTypes, timeSlots, gallonPrice, newGallonPrice }) => {
+const CreateBookingPage: React.FC<CreateBookingPageProps> = ({ addBooking, navigateTo, gallonTypes, timeSlots, newGallonPrice }) => {
     const [totalGallons, setTotalGallons] = useState(1);
     const [newGallonPurchaseCount, setNewGallonPurchaseCount] = useState(0);
-    const [gallonType, setGallonType] = useState<GallonType>(gallonTypes[0] || '');
+    const [gallonType, setGallonType] = useState<string>(gallonTypes[0]?.name || '');
     const [pickupAddress, setPickupAddress] = useState('');
     const [pickupDate, setPickupDate] = useState(new Date().toISOString().split('T')[0]);
     const [timeSlot, setTimeSlot] = useState<TimeSlot>(timeSlots[0] || '');
@@ -35,7 +34,9 @@ const CreateBookingPage: React.FC<CreateBookingPageProps> = ({ addBooking, navig
     };
 
     const refillCount = totalGallons - newGallonPurchaseCount;
-    const totalAmount = (refillCount * gallonPrice) + (newGallonPurchaseCount * newGallonPrice);
+    const selectedGallonType = gallonTypes.find(gt => gt.name === gallonType);
+    const refillPrice = selectedGallonType ? selectedGallonType.price : 0;
+    const totalAmount = (refillCount * refillPrice) + (newGallonPurchaseCount * newGallonPrice);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -70,8 +71,9 @@ const CreateBookingPage: React.FC<CreateBookingPageProps> = ({ addBooking, navig
                         <label className="block text-sm font-medium text-gray-700">Gallon Type</label>
                         <div className="mt-1 grid grid-cols-3 gap-3">
                             {gallonTypes.map(type => (
-                                <button key={type} type="button" onClick={() => setGallonType(type)} className={`px-4 py-2 rounded-md text-sm font-semibold border-2 transition-colors ${gallonType === type ? 'bg-primary text-white border-primary-dark' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
-                                    {type}
+                                <button key={type.name} type="button" onClick={() => setGallonType(type.name)} className={`px-4 py-3 rounded-md border-2 transition-colors flex flex-col items-center justify-center text-center ${gallonType === type.name ? 'bg-primary text-white border-primary-dark' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
+                                    <span className="font-semibold text-sm">{type.name}</span>
+                                    <span className="text-xs mt-1">{type.price.toLocaleString('en-US', { style: 'currency', currency: 'PHP' })}/refill</span>
                                 </button>
                             ))}
                         </div>

@@ -13,18 +13,24 @@ interface AdminDashboardProps {
   updateUserType: (id: string, type: UserType) => void;
   gallonTypes: GallonType[];
   timeSlots: TimeSlot[];
-  gallonPrice: number;
   newGallonPrice: number;
   onAddGallonType: (type: GallonType) => void;
-  onRemoveGallonType: (type: GallonType) => void;
+  onRemoveGallonType: (typeName: string) => void;
   onAddTimeSlot: (slot: TimeSlot) => void;
   onRemoveTimeSlot: (slot: TimeSlot) => void;
-  onUpdateGallonPrice: (price: number) => void;
   onUpdateNewGallonPrice: (price: number) => void;
 }
 
 type MainTab = 'overview' | 'manage' | 'payments' | 'settings' | 'users';
 type ManageTab = 'Pending' | 'Active' | 'Completed' | 'Cancelled';
+
+const MAIN_TABS: { id: MainTab; label: string }[] = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'manage', label: 'Manage Bookings' },
+    { id: 'users', label: 'Manage Users' },
+    { id: 'payments', label: 'Payments' },
+    { id: 'settings', label: 'Settings' },
+];
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
   const { allBookings, updateBookingStatus, users, updateUserType } = props;
@@ -62,7 +68,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
   const ManageTabButton: React.FC<{ tabName: ManageTab; count: number }> = ({ tabName, count }) => (
     <button
       onClick={() => setActiveManageTab(tabName)}
-      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
         activeManageTab === tabName
           ? 'bg-primary text-white shadow'
           : 'text-gray-600 hover:bg-primary-light hover:text-primary-dark'
@@ -74,11 +80,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
   
   const renderManageBookings = () => (
     <>
-      <div className="bg-white p-2 rounded-lg shadow-sm mb-8 flex items-center gap-2">
-        <ManageTabButton tabName="Pending" count={allBookings.filter(b => b.status === 'Pending').length} />
-        <ManageTabButton tabName="Active" count={allBookings.filter(b => !['Pending', 'Completed', 'Cancelled'].includes(b.status)).length} />
-        <ManageTabButton tabName="Completed" count={allBookings.filter(b => b.status === 'Completed').length} />
-        <ManageTabButton tabName="Cancelled" count={allBookings.filter(b => b.status === 'Cancelled').length} />
+      <div className="bg-white p-2 rounded-lg shadow-sm mb-8 overflow-x-auto">
+        <div className="flex items-center gap-2 min-w-max">
+            <ManageTabButton tabName="Pending" count={allBookings.filter(b => b.status === 'Pending').length} />
+            <ManageTabButton tabName="Active" count={allBookings.filter(b => !['Pending', 'Completed', 'Cancelled'].includes(b.status)).length} />
+            <ManageTabButton tabName="Completed" count={allBookings.filter(b => b.status === 'Completed').length} />
+            <ManageTabButton tabName="Cancelled" count={allBookings.filter(b => b.status === 'Cancelled').length} />
+        </div>
       </div>
 
       <div>
@@ -145,15 +153,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Admin Dashboard</h1>
 
-      <div className="border-b border-gray-200">
+      {/* Desktop Tabs */}
+      <div className="hidden md:block border-b border-gray-200">
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-            <MainTabButton tabName="overview" label="Overview" />
-            <MainTabButton tabName="manage" label="Manage Bookings" />
-            <MainTabButton tabName="users" label="Manage Users" />
-            <MainTabButton tabName="payments" label="Payments" />
-            <MainTabButton tabName="settings" label="Settings" />
+            {MAIN_TABS.map(tab => (
+                 <MainTabButton key={tab.id} tabName={tab.id} label={tab.label} />
+            ))}
         </nav>
       </div>
+      
+      {/* Mobile Dropdown */}
+      <div className="md:hidden mb-4">
+        <select
+            aria-label="Select a tab"
+            value={activeMainTab}
+            onChange={e => setActiveMainTab(e.target.value as MainTab)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+        >
+           {MAIN_TABS.map(tab => (
+               <option key={tab.id} value={tab.id}>{tab.label}</option>
+           ))}
+        </select>
+      </div>
+
 
       <div className="mt-8">
         {activeMainTab === 'overview' && <OverviewDashboard bookings={allBookings} users={users} />}

@@ -40,7 +40,6 @@ const App: React.FC = () => {
   // Service configuration state
   const [gallonTypes, setGallonTypes] = useState<GallonType[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [gallonPrice, setGallonPrice] = useState<number>(0);
   const [newGallonPrice, setNewGallonPrice] = useState<number>(0);
 
   const navigateTo = useCallback((page: Page) => {
@@ -126,13 +125,11 @@ const App: React.FC = () => {
         if (data.settings) {
             setGallonTypes(data.settings.gallonTypes || []);
             setTimeSlots(data.settings.timeSlots || []);
-            setGallonPrice(data.settings.gallonPrice || 25);
             setNewGallonPrice(data.settings.newGallonPrice || 150);
         } else {
              console.warn("No 'settings' object in fetched data, using default settings.");
-             setGallonTypes(['Slim', 'Round', '5G']);
+             setGallonTypes([{name: 'Slim', price: 25}, {name: 'Round', price: 25}]);
              setTimeSlots(['9am–12pm', '1pm–5pm']);
-             setGallonPrice(25);
              setNewGallonPrice(150);
         }
 
@@ -151,9 +148,8 @@ const App: React.FC = () => {
         // Set default empty state
         setUsers([]);
         setBookings([]);
-        setGallonTypes(['Slim', 'Round', '5G']);
+        setGallonTypes([{name: 'Slim', price: 25}, {name: 'Round', price: 25}]);
         setTimeSlots(['9am–12pm', '1pm–5pm']);
-        setGallonPrice(25);
         setNewGallonPrice(150);
     } finally {
         if (!isPolling) {
@@ -315,12 +311,16 @@ const App: React.FC = () => {
 
   const addBooking = async (newBooking: Omit<Booking, 'id' | 'status' | 'userId'>) => {
     if (!currentUser) return;
+    
+    const selectedGallonType = gallonTypes.find(gt => gt.name === newBooking.gallonType);
+    const refillPrice = selectedGallonType ? selectedGallonType.price : 0;
+
     const booking: Booking = {
       id: `B${Date.now().toString(36)}`,
       ...newBooking,
       userId: currentUser.id,
       status: 'Pending',
-      price: (newBooking.gallonCount * gallonPrice) + ((newBooking.newGallonPurchaseCount || 0) * newGallonPrice),
+      price: (newBooking.gallonCount * refillPrice) + ((newBooking.newGallonPurchaseCount || 0) * newGallonPrice),
     };
      const success = await sendDataToSheet(booking, 'booking');
      if (success) {
@@ -373,39 +373,33 @@ const App: React.FC = () => {
   };
 
   const addGallonType = (type: GallonType) => {
-    if (type && !gallonTypes.includes(type)) {
+    if (type.name && !gallonTypes.some(g => g.name.toLowerCase() === type.name.toLowerCase())) {
       const newGallonTypes = [...gallonTypes, type];
       setGallonTypes(newGallonTypes);
-      saveSettings({ gallonTypes: newGallonTypes, timeSlots, gallonPrice, newGallonPrice });
+      saveSettings({ gallonTypes: newGallonTypes, timeSlots, newGallonPrice });
     }
   };
-  const removeGallonType = (type: GallonType) => {
-      const newGallonTypes = gallonTypes.filter(t => t !== type);
+  const removeGallonType = (typeName: string) => {
+      const newGallonTypes = gallonTypes.filter(t => t.name !== typeName);
       setGallonTypes(newGallonTypes);
-      saveSettings({ gallonTypes: newGallonTypes, timeSlots, gallonPrice, newGallonPrice });
+      saveSettings({ gallonTypes: newGallonTypes, timeSlots, newGallonPrice });
   };
   const addTimeSlot = (slot: TimeSlot) => {
       if (slot && !timeSlots.includes(slot)) {
           const newTimeSlots = [...timeSlots, slot];
           setTimeSlots(newTimeSlots);
-          saveSettings({ gallonTypes, timeSlots: newTimeSlots, gallonPrice, newGallonPrice });
+          saveSettings({ gallonTypes, timeSlots: newTimeSlots, newGallonPrice });
       }
   };
   const removeTimeSlot = (slot: TimeSlot) => {
       const newTimeSlots = timeSlots.filter(s => s !== slot);
       setTimeSlots(newTimeSlots);
-      saveSettings({ gallonTypes, timeSlots: newTimeSlots, gallonPrice, newGallonPrice });
-  };
-  const updateGallonPrice = (newPrice: number) => {
-      if (newPrice >= 0) {
-          setGallonPrice(newPrice);
-          saveSettings({ gallonTypes, timeSlots, gallonPrice: newPrice, newGallonPrice });
-      }
+      saveSettings({ gallonTypes, timeSlots: newTimeSlots, newGallonPrice });
   };
   const updateNewGallonPrice = (newPrice: number) => {
       if (newPrice >= 0) {
           setNewGallonPrice(newPrice);
-          saveSettings({ gallonTypes, timeSlots, gallonPrice, newGallonPrice: newPrice });
+          saveSettings({ gallonTypes, timeSlots, newGallonPrice: newPrice });
       }
   };
 
@@ -420,8 +414,8 @@ const App: React.FC = () => {
       case Page.RESET_PASSWORD: return <ResetPasswordPage navigateTo={navigateTo} onResetPassword={handleResetPassword} initialEmail={passwordResetState.email || ''} />;
       case Page.USER_DASHBOARD: return currentUser && <UserDashboard bookings={userBookings} navigateTo={navigateTo} />;
       case Page.RIDER_DASHBOARD: return currentUser && <RiderDashboard allBookings={bookings} updateBookingStatus={updateBookingStatus} />;
-      case Page.ADMIN_DASHBOARD: return <AdminDashboard allBookings={bookings} users={users} updateBookingStatus={updateBookingStatus} updateUserType={updateUserType} gallonTypes={gallonTypes} timeSlots={timeSlots} gallonPrice={gallonPrice} newGallonPrice={newGallonPrice} onAddGallonType={addGallonType} onRemoveGallonType={removeGallonType} onAddTimeSlot={addTimeSlot} onRemoveTimeSlot={removeTimeSlot} onUpdateGallonPrice={updateGallonPrice} onUpdateNewGallonPrice={updateNewGallonPrice} />;
-      case Page.CREATE_BOOKING: return <CreateBookingPage addBooking={addBooking} navigateTo={navigateTo} gallonTypes={gallonTypes} timeSlots={timeSlots} gallonPrice={gallonPrice} newGallonPrice={newGallonPrice} />;
+      case Page.ADMIN_DASHBOARD: return <AdminDashboard allBookings={bookings} users={users} updateBookingStatus={updateBookingStatus} updateUserType={updateUserType} gallonTypes={gallonTypes} timeSlots={timeSlots} newGallonPrice={newGallonPrice} onAddGallonType={addGallonType} onRemoveGallonType={removeGallonType} onAddTimeSlot={addTimeSlot} onRemoveTimeSlot={removeTimeSlot} onUpdateNewGallonPrice={updateNewGallonPrice} />;
+      case Page.CREATE_BOOKING: return <CreateBookingPage addBooking={addBooking} navigateTo={navigateTo} gallonTypes={gallonTypes} timeSlots={timeSlots} newGallonPrice={newGallonPrice} />;
       default: return <LandingPage navigateTo={navigateTo} />;
     }
   };
